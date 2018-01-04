@@ -4,7 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.dmitriymorozov.knifeandfork.MainActivity">
+    tools:context="com.dmitriymorozov.findfork.ui.MainActivity">
+
+
 
     <android.support.design.widget.TextInputLayout
         android:id="@+id/textinput_main_location"
@@ -13,7 +15,7 @@
         android:layout_margin="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@id/btn_main_current_location"
+        app:layout_constraintRight_toLeftOf="@id/btn_main_toggle_mode"
         android:hint="Type in your address or Zip code"
         >
 
@@ -26,40 +28,37 @@
         />
     </android.support.design.widget.TextInputLayout>
 
-    <ImageButton
-        android:id="@+id/btn_main_current_location"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <CheckBox
+        android:id="@+id/btn_main_toggle_mode"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintDimensionRatio="1:1"
         android:layout_margin="8dp"
         app:layout_constraintLeft_toRightOf="@id/textinput_main_location"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="@id/textinput_main_location"
         app:layout_constraintBottom_toBottomOf="@id/textinput_main_location"
-        android:backgroundTint="@android:color/black"
-        android:background="@android:drawable/ic_menu_mylocation"
+        android:button="@drawable/ic_main_toggle"
         />
 
-    <fragment
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:map="http://schemas.android.com/apk/res-auto"
-        tools:context="com.example.dmitriymorozov.knifeandfork.MainActivity"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
-        android:id="@+id/map_main_googleMap"
+    <FrameLayout
+        android:id="@+id/frame_main_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        map:layout_constraintTop_toBottomOf="@id/textinput_main_location"
-        map:cameraZoom="13"
-        map:mapType="normal"
-        map:uiCompass="true"
-        map:uiRotateGestures="true"
-        map:uiScrollGestures="true"
-        map:uiTiltGestures="true"
-        map:uiZoomControls="true"
-        map:uiZoomGestures="true"
-        />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textinput_main_location"/>
 
+    <ProgressBar
+        android:id="@+id/progress_main_downloading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="@id/frame_main_container"
+        android:visibility="gone"
+        />
 </android.support.constraint.ConstraintLayout>

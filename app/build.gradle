@@ -1,57 +1,54 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion project.ext.myCompileSdkVersion
-    buildToolsVersion project.ext.myBuildToolsVersion
+  compileSdkVersion project.ext.myCompileSdkVersion
+  buildToolsVersion project.ext.myBuildToolsVersion
+  defaultConfig {
+    applicationId 'com.dmitriymorozov.knifeandfork'
+    minSdkVersion project.ext.myMinSdkVersion
+    targetSdkVersion project.ext.myTargetSdkVersion
+    versionCode 1
+    versionName "1.0"
 
-    defaultConfig {
-        applicationId "com.example.dmitriymorozov.knifeandfork"
-        minSdkVersion project.ext.myMinSdkVersion
-        targetSdkVersion project.ext.myTargetSdkVersion
-        versionCode 1
-        versionName "1.0"
-
-        multiDexEnabled true
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        resValue "string", "google_maps_key", (project.findProperty("GOOGLE_MAPS_API_KEY") ?: "AIzaSyCr7tCTqjWU9SARpa-NSgbKe38yk287uNk")
+    multiDexEnabled true
+    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+  }
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
+  }
+  productFlavors {}
 }
 
+
+
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+  compile 'com.facebook.stetho:stetho:1.5.0'
 
-    // Tests
-    androidTestCompile(tests.espresso,
-            {
-                exclude group: 'com.android.support', module: 'support-annotations'
-            })
-    testCompile tests.junit
-
-    // Android support
-    compile support.appcompat7
-    compile support.support4
-    compile support.design
-    compile support.constraintLayout
-    compile support.recyclerview
-
-    // ButterKnife
-    compile jakewharton.butterknife
-    annotationProcessor jakewharton.butterknifeCompiler
-
-    //GooglePlayServices
-    compile googleplay.services
-    compile googleplay.location
-
-    //Retrofit
-    compile squareup.retrofit
-    compile squareup.converterGson
-
-    //Annotations for Java SE5
-    compile annotation.annotation
+  compile fileTree(include: ['*.jar'], dir: 'libs')
+  // Tests
+  androidTestCompile(tests.espresso,
+      {
+        exclude group: 'com.android.support', module: 'support-annotations'
+      })
+  testCompile tests.junit
+  // Android support
+  compile support.appcompat7
+  compile support.support4
+  compile support.design
+  compile support.constraintLayout
+  compile support.recyclerview
+  // ButterKnife
+  compile jakewharton.butterknife
+  annotationProcessor jakewharton.butterknifeCompiler
+  //GooglePlayServices
+  compile googleplay.services
+  compile googleplay.location
+  //Retrofit
+  compile squareup.retrofit
+  compile squareup.converterGson
+  //Annotations for Java SE5
+  compile annotation.annotation
 }

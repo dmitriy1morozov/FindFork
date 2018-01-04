@@ -32,7 +32,7 @@ allprojects {
     }
 
     ext.versions = [
-            androidSupport: "25.0.0",
+            androidSupport: "26.1.0",
             constraintLayout: "1.0.2",
             butterKnife: "8.7.0",
             espresso: "2.2.2",

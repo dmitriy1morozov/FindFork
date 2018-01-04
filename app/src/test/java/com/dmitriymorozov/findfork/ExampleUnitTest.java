@@ -1,4 +1,4 @@
-package com.example.dmitriymorozov.knifeandfork;
+package com.dmitriymorozov.findfork;
 
 import org.junit.Test;
 
