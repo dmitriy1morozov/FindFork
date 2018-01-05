@@ -14,6 +14,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
@@ -23,7 +24,7 @@ import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.google.android.gms.maps.model.LatLng;
 
 public class MainActivity extends AppCompatActivity implements OnCameraMovedListener,
-		OnDataDownloadedListener {
+		OnServiceWorkFinished {
 		private static final String TAG = "MyLogs MainActivity";
 
 		public static final boolean TOGGLE_MAP = true;
@@ -56,7 +57,7 @@ public class MainActivity extends AppCompatActivity implements OnCameraMovedList
 				ButterKnife.bind(this);
 
 				if (savedInstanceState == null) {
-						//TODO change to current location from sensor
+						//TODO set current location to the location obtained from GPS sensor
 						Log.d(TAG, "onCreate: Initial State");
 						((MainApplication) getApplicationContext()).mCenter = new LatLng( -33.867, 151.206);
 						((MainApplication) getApplicationContext()).mCameraZoom = 13;
@@ -102,8 +103,15 @@ public class MainActivity extends AppCompatActivity implements OnCameraMovedList
 				}
 		}
 
-		@Override public void onDataDownloaded() {
-				Log.d(TAG, "onDataDownloaded: ");
+		@Override public void onWorkFinished() {
+				Log.d(TAG, "onServiceWorkFinished: ");
 				mDownloadingProgressBar.setVisibility(View.GONE);
+		}
+
+		@Override public void onError(int code, String errorType, String errorDetail) {
+				Log.d(TAG, "onServiceError: ");
+				mDownloadingProgressBar.setVisibility(View.GONE);
+				//TODO Change error handling for production. This is used while debugging only!
+				Toast.makeText(this, "error " + code + "\nError Type: " + errorType + "\nError Detail: " + errorDetail, Toast.LENGTH_LONG).show();
 		}
 }

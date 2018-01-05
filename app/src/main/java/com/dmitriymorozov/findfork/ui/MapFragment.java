@@ -61,7 +61,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 				float zoom = ((MainApplication)getActivity().getApplicationContext()).mCameraZoom;
 
 				//TODO Handle permissions
-				mMap.setMyLocationEnabled(true);
+				//mMap.setMyLocationEnabled(true);
 				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
 				mMap.setOnCameraIdleListener(this);
 

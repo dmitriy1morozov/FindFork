@@ -16,10 +16,8 @@ class DBHelper extends SQLiteOpenHelper {
 
 		@Override public void onCreate(SQLiteDatabase db) {
 				Log.d(TAG, "onCreate: ");
-				db.execSQL(CREATE_TABLE_VENUE);
-				db.execSQL(CREATE_TABLE_CONTACT);
-				db.execSQL(CREATE_TABLE_LOCATION);
-				db.execSQL(CREATE_TABLE_PRICE);
+				db.execSQL(CREATE_TABLE_VENUES);
+				db.execSQL(CREATE_TABLE_DETAILS);
 		}
 
 		@Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {

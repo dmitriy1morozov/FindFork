@@ -17,48 +17,30 @@ public class MyContentProvider extends ContentProvider {
 		private static final String AUTHORITY = "com.dmitriymorozov.findfork.database";
 
 		public static final Uri URI_CONTENT_VENUES = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_VENUES));
-		public static final Uri URI_CONTENT_CONTACT = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_CONTACT));
-		public static final Uri URI_CONTENT_LOCATION = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_LOCATION));
-		public static final Uri URI_CONTENT_PRICE = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_PRICE));
+		public static final Uri URI_CONTENT_DETAILS = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_DETAILS));
 
 		private static final String CONTENT_TYPE_VENUE_SINGLE = String.format(Locale.US,
 				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_VENUES);
 		private static final String CONTENT_TYPE_VENUE_MULTIPLE = String.format(Locale.US,
 				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_VENUES);
-		private static final String CONTENT_TYPE_CONTACT_SINGLE = String.format(Locale.US,
-				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_CONTACT);
-		private static final String CONTENT_TYPE_CONTACT_MULTIPLE = String.format(Locale.US,
-				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_CONTACT);
-		private static final String CONTENT_TYPE_LOCATION_SINGLE = String.format(Locale.US,
-				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_LOCATION);
-		private static final String CONTENT_TYPE_LOCATION_MULTIPLE = String.format(Locale.US,
-				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_LOCATION);
-		private static final String CONTENT_TYPE_PRICE_SINGLE = String.format(Locale.US,
-				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_PRICE);
-		private static final String CONTENT_TYPE_PRICE_MULTIPLE = String.format(Locale.US,
-				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_PRICE);
+		private static final String CONTENT_TYPE_DETAILS_SINGLE = String.format(Locale.US,
+				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_DETAILS);
+		private static final String CONTENT_TYPE_DETAILS_MULTIPLE = String.format(Locale.US,
+				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_DETAILS);
 
 		//UriMatcher constants
-		private static final int URI_MATCH_VENUE_ALL = 1;
-		private static final int URI_MATCH_VENUE_SINGLE = 2;
-		private static final int URI_MATCH_CONTACT_ALL = 3;
-		private static final int URI_MATCH_CONTACT_SINGLE = 4;
-		private static final int URI_MATCH_LOCATION_ALL = 5;
-		private static final int URI_MATCH_LOCATION_SINGLE = 6;
-		private static final int URI_MATCH_PRICE_ALL = 7;
-		private static final int URI_MATCH_PRICE_SINGLE = 8;
+		private static final int URI_MATCH_VENUE_SINGLE = 1;
+		private static final int URI_MATCH_VENUE_MULTIPLE = 2;
+		private static final int URI_MATCH_DETAILS_SINGLE = 3;
+		private static final int URI_MATCH_DETAILS_MULTIPLE = 4;
 
 		private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 		static
 		{
-				sUriMatcher.addURI(AUTHORITY, TABLE_VENUES, URI_MATCH_VENUE_ALL);
 				sUriMatcher.addURI(AUTHORITY, TABLE_VENUES + "/*", URI_MATCH_VENUE_SINGLE);
-				sUriMatcher.addURI(AUTHORITY, TABLE_CONTACT, URI_MATCH_CONTACT_ALL);
-				sUriMatcher.addURI(AUTHORITY, TABLE_CONTACT + "/*", URI_MATCH_CONTACT_SINGLE);
-				sUriMatcher.addURI(AUTHORITY, TABLE_LOCATION, URI_MATCH_LOCATION_ALL);
-				sUriMatcher.addURI(AUTHORITY, TABLE_LOCATION + "/*", URI_MATCH_LOCATION_SINGLE);
-				sUriMatcher.addURI(AUTHORITY, TABLE_PRICE, URI_MATCH_PRICE_ALL);
-				sUriMatcher.addURI(AUTHORITY, TABLE_PRICE + "/*", URI_MATCH_PRICE_SINGLE);
+				sUriMatcher.addURI(AUTHORITY, TABLE_VENUES, URI_MATCH_VENUE_MULTIPLE);
+				sUriMatcher.addURI(AUTHORITY, TABLE_DETAILS + "/*", URI_MATCH_DETAILS_SINGLE);
+				sUriMatcher.addURI(AUTHORITY, TABLE_DETAILS, URI_MATCH_DETAILS_MULTIPLE);
 		}
 
 		private DBHelper mDbHelper;
@@ -76,9 +58,25 @@ public class MyContentProvider extends ContentProvider {
 
 
 		@Override public Uri insert(Uri uri, ContentValues values) {
-				Log.d(TAG, "insert: ");
 				mSqliteDatabase = mDbHelper.getWritableDatabase();
-				return ContentUris.withAppendedId(URI_CONTENT_VENUES, 1);
+				Uri resultUri;
+				if(sUriMatcher.match(uri) == URI_MATCH_VENUE_MULTIPLE){
+						Log.d(TAG, "insertVENUES: values = " + values);
+						long rowId = mSqliteDatabase.insertWithOnConflict(TABLE_VENUES, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+						resultUri = ContentUris.withAppendedId(URI_CONTENT_VENUES, rowId);
+				} else if(sUriMatcher.match(uri) == URI_MATCH_DETAILS_MULTIPLE){
+						Log.d(TAG, "insertDETAILS: values = " + values);
+						long rowId = mSqliteDatabase.insertWithOnConflict(TABLE_DETAILS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+						resultUri = ContentUris.withAppendedId(URI_CONTENT_DETAILS, rowId);
+				} else{
+						Log.d(TAG, "insert: WRONG URI!! terminating");
+						return uri;
+				}
+
+				if(getContext() != null){
+						getContext().getContentResolver().notifyChange(resultUri, null);
+				}
+				return resultUri;
 		}
 
 		@Override public int delete(Uri uri, String selection, String[] selectionArgs) {
@@ -100,22 +98,14 @@ public class MyContentProvider extends ContentProvider {
 		@Override public String getType(Uri uri) {
 				Log.d(TAG, "getType: ");
 				switch (sUriMatcher.match(uri)){
-						case URI_MATCH_VENUE_ALL:
-								return CONTENT_TYPE_VENUE_MULTIPLE;
 						case URI_MATCH_VENUE_SINGLE:
 								return CONTENT_TYPE_VENUE_SINGLE;
-						case URI_MATCH_CONTACT_ALL:
-								return CONTENT_TYPE_CONTACT_MULTIPLE;
-						case URI_MATCH_CONTACT_SINGLE:
-								return CONTENT_TYPE_CONTACT_SINGLE;
-						case URI_MATCH_LOCATION_ALL:
-								return CONTENT_TYPE_LOCATION_MULTIPLE;
-						case URI_MATCH_LOCATION_SINGLE:
-								return CONTENT_TYPE_LOCATION_SINGLE;
-						case URI_MATCH_PRICE_ALL:
-								return CONTENT_TYPE_PRICE_MULTIPLE;
-						case URI_MATCH_PRICE_SINGLE:
-								return CONTENT_TYPE_PRICE_SINGLE;
+						case URI_MATCH_VENUE_MULTIPLE:
+								return CONTENT_TYPE_VENUE_MULTIPLE;
+						case URI_MATCH_DETAILS_SINGLE:
+								return CONTENT_TYPE_DETAILS_SINGLE;
+						case URI_MATCH_DETAILS_MULTIPLE:
+								return CONTENT_TYPE_DETAILS_MULTIPLE;
 						default:
 								return null;
 				}

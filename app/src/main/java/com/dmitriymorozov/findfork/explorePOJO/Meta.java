@@ -6,34 +6,58 @@ import com.google.gson.annotations.SerializedName;
 @Generated("com.robohorse.robopojogenerator")
 public class Meta{
 
-	@SerializedName("code")
-	private int code;
+		@SerializedName("code")
+		private int code;
 
-	@SerializedName("requestId")
-	private String requestId;
+		@SerializedName("errorType")
+		private String errorType;
 
-	public void setCode(int code){
-		this.code = code;
-	}
+		@SerializedName("requestId")
+		private String requestId;
 
-	public int getCode(){
-		return code;
-	}
+		@SerializedName("errorDetail")
+		private String errorDetail;
 
-	public void setRequestId(String requestId){
-		this.requestId = requestId;
-	}
+		public void setCode(int code){
+				this.code = code;
+		}
 
-	public String getRequestId(){
-		return requestId;
-	}
+		public int getCode(){
+				return code;
+		}
 
-	@Override
- 	public String toString(){
-		return 
-			"Meta{" + 
-			"code = '" + code + '\'' + 
-			",requestId = '" + requestId + '\'' + 
-			"}";
+		public void setErrorType(String errorType){
+				this.errorType = errorType;
+		}
+
+		public String getErrorType(){
+				return errorType;
+		}
+
+		public void setRequestId(String requestId){
+				this.requestId = requestId;
+		}
+
+		public String getRequestId(){
+				return requestId;
+		}
+
+		public void setErrorDetail(String errorDetail){
+				this.errorDetail = errorDetail;
+		}
+
+		public String getErrorDetail(){
+				return errorDetail;
+		}
+
+		@Override
+		public String toString(){
+				return
+						"Meta{" +
+								"code = '" + code + '\'' +
+								",errorType = '" + errorType + '\'' +
+								",requestId = '" + requestId + '\'' +
+								",errorDetail = '" + errorDetail + '\'' +
+								"}";
 		}
 }
