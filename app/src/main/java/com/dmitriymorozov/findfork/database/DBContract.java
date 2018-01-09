@@ -14,6 +14,7 @@ public class DBContract{
 		public static final String VENUE_LAT = "latitude";
 		public static final String VENUE_LNG = "longitude";
 		public static final String VENUE_RATING = "rating";
+		public static final String VENUE_RATING_SUBMITTER = "rating_submitter";
 
 		public static final String DETAILS_ADDRESS_FORMATTED = "address_formatted";
 		public static final String DETAILS_PHONE = "phone";
@@ -26,11 +27,11 @@ public class DBContract{
 		static final String CREATE_TABLE_VENUES = String.format(Locale.US,
 				"create table %s "
 						+ "(%s text primary key, "
-						+ "%s text, %s real, %s real, %s real, "
+						+ "%s text, %s real, %s real, %s real, %s text, "
 						+ "UNIQUE(%s));",
 				TABLE_VENUES,
 				VENUE_ID,
-				VENUE_NAME, VENUE_LAT, VENUE_LNG, VENUE_RATING,
+				VENUE_NAME, VENUE_LAT, VENUE_LNG, VENUE_RATING, VENUE_RATING_SUBMITTER,
 				VENUE_ID
 				);
 

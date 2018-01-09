@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.FragmentTransaction;
@@ -24,7 +25,7 @@ import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.google.android.gms.maps.model.LatLng;
 
 public class MainActivity extends AppCompatActivity implements OnCameraMovedListener,
-		OnServiceWorkFinished {
+		OnServiceListener {
 		private static final String TAG = "MyLogs MainActivity";
 
 		public static final boolean TOGGLE_MAP = true;
@@ -99,16 +100,18 @@ public class MainActivity extends AppCompatActivity implements OnCameraMovedList
 				Log.d(TAG, "onCameraMove:");
 				mDownloadingProgressBar.setVisibility(View.VISIBLE);
 				if(mBinder != null){
-						mBinder.downloadNearbyVenuesByRectangle(southWest, northEast);
+						mBinder.downloadVenuesByRectangleFromApi(southWest, northEast);
+						//Download from localDB
+						Cursor venues = mBinder.getVenuesByRectangleFromDb(southWest, northEast);
 				}
 		}
 
-		@Override public void onWorkFinished() {
+		@Override public void onNetworkJobsFinished() {
 				Log.d(TAG, "onServiceWorkFinished: ");
 				mDownloadingProgressBar.setVisibility(View.GONE);
 		}
 
-		@Override public void onError(int code, String errorType, String errorDetail) {
+		@Override public void onNetworkError(int code, String errorType, String errorDetail) {
 				Log.d(TAG, "onServiceError: ");
 				mDownloadingProgressBar.setVisibility(View.GONE);
 				//TODO Change error handling for production. This is used while debugging only!

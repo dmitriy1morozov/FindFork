@@ -80,6 +80,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 		}
 
 
+		//==============================================================================================
 		private void sendMapRectangleToActivity(){
 				VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
 				LatLng southWest = visibleRegion.nearLeft;

@@ -3,6 +3,7 @@ package com.dmitriymorozov.findfork.service;
 import android.app.Service;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -12,9 +13,10 @@ import com.dmitriymorozov.findfork.explorePOJO.FoursquareJSON;
 import com.dmitriymorozov.findfork.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.explorePOJO.Meta;
 import com.dmitriymorozov.findfork.explorePOJO.Venue;
-import com.dmitriymorozov.findfork.ui.OnServiceWorkFinished;
+import com.dmitriymorozov.findfork.ui.OnServiceListener;
 import com.google.android.gms.maps.model.LatLng;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import retrofit2.Call;
@@ -30,7 +32,7 @@ public class FoursquareService extends Service {
 		private static final int SERVICE_ERROR_CODE = 0;
 
 		private ApiFoursquare mRetrofit;
-		private WeakReference<OnServiceWorkFinished> mCallback;
+		private WeakReference<OnServiceListener> mCallbackRef;
 
 		public FoursquareService() {
 				mRetrofit = ApiFoursquare.retrofit.create(ApiFoursquare.class);
@@ -118,17 +120,17 @@ public class FoursquareService extends Service {
 				String errorType;
 				String errorDetail;
 
-				if(!response.isSuccessful()){
-						Log.d(TAG, "Retrofit response.isSuccessful() == false. FAIL. JSON.raw = " + response.raw());
-						//FIXME if response is not successful then body is null and I am unable to access meta. Study how to handle appropriately
-						//meta = response.body().getMeta();
-						//errorType = meta.getErrorType();
-						//errorDetail = meta.getErrorDetail();
-						if(mCallback != null && mCallback.get() != null){
-								mCallback.get().onError(responseCode, "error", "error");
-						}
-						return;
-				}
+				//if(!response.isSuccessful()){
+				//		Log.d(TAG, "Retrofit response.isSuccessful() == false. FAIL. JSON.raw = " + response.raw());
+				//		//FIXME if response is not successful then body is null and I am unable to access meta. Study how to handle appropriately
+				//		//meta = response.body().getMeta();
+				//		//errorType = meta.getErrorType();
+				//		//errorDetail = meta.getErrorDetail();
+				//		if(mCallbackRef != null && mCallbackRef.get() != null){
+				//				mCallbackRef.get().onNetworkError(responseCode, "error", "error");
+				//		}
+				//		return;
+				//}
 
 				if (responseCode == 200) {
 						List<ItemsItem> apiItems = response.body().getResponse().getGroups().get(0).getItems();
@@ -138,27 +140,31 @@ public class FoursquareService extends Service {
 								getContentResolver().bulkInsert(URI_CONTENT_VENUES, venues);
 								getContentResolver().bulkInsert(URI_CONTENT_DETAILS, details);
 						}
-						if (mCallback != null && mCallback.get() != null) {
-								mCallback.get().onWorkFinished();
+						if (mCallbackRef != null && mCallbackRef.get() != null) {
+								mCallbackRef.get().onNetworkJobsFinished();
 						}
 				} else {
 						Log.d(TAG, "Retrofit response.isSuccessful(). FAIL. JSON.raw = " + response.raw());
-						meta = response.body().getMeta();
-						errorType = meta.getErrorType();
-						errorDetail = meta.getErrorDetail();
-						if(mCallback != null && mCallback.get() != null){
-								mCallback.get().onError(responseCode, errorType, errorDetail);
+						//FIXME if response is not successful then body is null and I am unable to access meta. Study how to handle appropriately
+						//meta = response.body().getMeta();
+						//errorType = meta.getErrorType();
+						//errorDetail = meta.getErrorDetail();
+						if(mCallbackRef != null && mCallbackRef.get() != null){
+								mCallbackRef.get().onNetworkError(responseCode, "errorType", "errorDetail");
 						}
 				}
 		}
 		//==============================================================================================
 		public class LocalBinder extends Binder {
-				public void setOnDataDownloadListener(OnServiceWorkFinished onDataDownloadListener){
-						mCallback = new WeakReference<>(onDataDownloadListener);
+				public void setOnDataDownloadListener(OnServiceListener onDataDownloadListener){
+						mCallbackRef = new WeakReference<>(onDataDownloadListener);
 				}
 
-				public void downloadNearbyVenuesByRectangle(LatLng southWest, LatLng northEast){
-						Log.d(TAG, "downloadNearbyVenuesByRectangle: ");
+				//Api --> local DB layer
+				public void downloadVenuesByRectangleFromApi(LatLng southWest, LatLng northEast){
+						//TODO widen the rectangle by 300% to download more data
+						//TODO shrink database and rows that are outside 300% rectangle
+						Log.d(TAG, "downloadVenuesByRectangleFromApi: ");
 						String sw = String.format(Locale.US, "%s,%s", southWest.latitude, southWest.longitude);
 						String ne = String.format(Locale.US, "%s,%s", northEast.latitude, northEast.longitude);
 
@@ -173,13 +179,44 @@ public class FoursquareService extends Service {
 										Log.d(TAG, "Retrofit onFailure: " + t.getMessage());
 										String errorType = "Retrofit onFailure";
 										String errorDetail = "t.getMessage()";
-										if(mCallback != null && mCallback.get() != null){
-												mCallback.get().onError(SERVICE_ERROR_CODE, errorType, errorDetail);
+										if(mCallbackRef != null && mCallbackRef.get() != null){
+												mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
 										}
 								}
 						});
 				}
+
+				//Local DB --> UI layer
+				public Cursor getVenuesByRectangleFromDb(LatLng southWest, LatLng northEast){
+						double bottomLat = southWest.latitude;
+						double topLat =  northEast.latitude;
+						double leftLng = southWest.longitude;
+						double rightLng = northEast.longitude;
+
+						String selectionLng;
+						String selectionLat;
+						ArrayList<String> selectionArgsList = new ArrayList<>();
+
+						selectionLat = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LAT, DBContract.VENUE_LAT);
+						selectionArgsList.add(String.valueOf(bottomLat));
+						selectionArgsList.add(String.valueOf(topLat));
+
+						if(leftLng < rightLng){
+								selectionLng = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LNG, DBContract.VENUE_LNG);
+								selectionArgsList.add(String.valueOf(leftLng));
+								selectionArgsList.add(String.valueOf(rightLng));
+						} else{
+								selectionLng = String.format(Locale.US, "(%s > ? AND %s < ?) OR (%s > ? AND %s < ?)", DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG);
+								selectionArgsList.add(String.valueOf(leftLng));
+								selectionArgsList.add(String.valueOf(0));
+								selectionArgsList.add(String.valueOf(0));
+								selectionArgsList.add(String.valueOf(rightLng));
+						}
+						String selection = String.format(Locale.US, "%s AND %s", selectionLat, selectionLng);
+						String[] selectionArgs = new String[selectionArgsList.size()];
+						selectionArgsList.toArray(selectionArgs);
+
+						return getContentResolver().query(URI_CONTENT_VENUES, null, selection, selectionArgs, null);
+				}
 		}
-
-
 }
