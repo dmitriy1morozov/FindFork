@@ -155,7 +155,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 				mMap = googleMap;
 				LatLng position = ((MainApplication)getActivity().getApplicationContext()).mCenter;
 				float zoom = ((MainApplication)getActivity().getApplicationContext()).mCameraZoom;
-
 				//TODO Handle permissions
 				//mMap.setMyLocationEnabled(true);
 				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
@@ -210,10 +209,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 				double topLat = args.getDouble(LATITUDE_TOP);
 				double leftLng = args.getDouble(LONGITUDE_LEFT);
 				double rightLng = args.getDouble(LONGITUDE_RIGHT);
-				Log.d(TAG, "onCreateLoader bottomLat = " + bottomLat);
-				Log.d(TAG, "onCreateLoader topLat = " + topLat);
-				Log.d(TAG, "onCreateLoader leftLng = " + leftLng);
-				Log.d(TAG, "onCreateLoader rightLng = " + rightLng);
 
 				String selectionLng;
 				String selectionLat;
@@ -310,8 +305,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 		@Override public boolean onMarkerClick(Marker marker) {
 				//TODO show details about the venue
 				FragmentTransaction fragmentTransaction = getActivity().getSupportFragmentManager().beginTransaction();
-				fragmentTransaction.addToBackStack(null);
 				DetailsFragment detailsFragment = new DetailsFragment();
+				//detailsFragment.setRetainInstance(true);
 				detailsFragment.setmVenueId(String.valueOf(marker.getTag()));
 				detailsFragment.show(fragmentTransaction, "venueDetails");
 				return false;

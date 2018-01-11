@@ -70,4 +70,5 @@
 				android:rotation="180"
 				android:thumb="@android:drawable/star_on"
 				/>
+
 </android.support.constraint.ConstraintLayout>

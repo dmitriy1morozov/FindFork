@@ -96,7 +96,6 @@ public class MyContentProvider extends ContentProvider {
 
 				String tableName;
 				Uri uriContent;
-
 				switch (sUriMatcher.match(uri)){
 						case URI_MATCH_VENUE_MULTIPLE:
 								Log.d(TAG, "query VENUES_MULTIPLE");
