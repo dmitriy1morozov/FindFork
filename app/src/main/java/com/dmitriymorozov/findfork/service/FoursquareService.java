@@ -3,7 +3,6 @@ package com.dmitriymorozov.findfork.service;
 import android.app.Service;
 import android.content.ContentValues;
 import android.content.Intent;
-import android.database.Cursor;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -16,7 +15,6 @@ import com.dmitriymorozov.findfork.explorePOJO.Venue;
 import com.dmitriymorozov.findfork.ui.OnServiceListener;
 import com.google.android.gms.maps.model.LatLng;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import retrofit2.Call;
@@ -153,6 +151,9 @@ public class FoursquareService extends Service {
 								mCallbackRef.get().onNetworkError(responseCode, "errorType", "errorDetail");
 						}
 				}
+
+				//Release the objects
+				response = null;
 		}
 		//==============================================================================================
 		public class LocalBinder extends Binder {
@@ -168,7 +169,7 @@ public class FoursquareService extends Service {
 						String sw = String.format(Locale.US, "%s,%s", southWest.latitude, southWest.longitude);
 						String ne = String.format(Locale.US, "%s,%s", northEast.latitude, northEast.longitude);
 
-						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 30);
+						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 50);
 						call.enqueue(new Callback<FoursquareJSON>() {
 								@Override public void onResponse(Call<FoursquareJSON> call,
 										Response<FoursquareJSON> response) {
@@ -184,39 +185,6 @@ public class FoursquareService extends Service {
 										}
 								}
 						});
-				}
-
-				//Local DB --> UI layer
-				public Cursor getVenuesByRectangleFromDb(LatLng southWest, LatLng northEast){
-						double bottomLat = southWest.latitude;
-						double topLat =  northEast.latitude;
-						double leftLng = southWest.longitude;
-						double rightLng = northEast.longitude;
-
-						String selectionLng;
-						String selectionLat;
-						ArrayList<String> selectionArgsList = new ArrayList<>();
-
-						selectionLat = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LAT, DBContract.VENUE_LAT);
-						selectionArgsList.add(String.valueOf(bottomLat));
-						selectionArgsList.add(String.valueOf(topLat));
-
-						if(leftLng < rightLng){
-								selectionLng = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LNG, DBContract.VENUE_LNG);
-								selectionArgsList.add(String.valueOf(leftLng));
-								selectionArgsList.add(String.valueOf(rightLng));
-						} else{
-								selectionLng = String.format(Locale.US, "(%s > ? AND %s < ?) OR (%s > ? AND %s < ?)", DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG);
-								selectionArgsList.add(String.valueOf(leftLng));
-								selectionArgsList.add(String.valueOf(0));
-								selectionArgsList.add(String.valueOf(0));
-								selectionArgsList.add(String.valueOf(rightLng));
-						}
-						String selection = String.format(Locale.US, "%s AND %s", selectionLat, selectionLng);
-						String[] selectionArgs = new String[selectionArgsList.size()];
-						selectionArgsList.toArray(selectionArgs);
-
-						return getContentResolver().query(URI_CONTENT_VENUES, null, selection, selectionArgs, null);
 				}
 		}
 }

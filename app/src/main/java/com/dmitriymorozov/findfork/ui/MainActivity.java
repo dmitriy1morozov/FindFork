@@ -1,31 +1,20 @@
 package com.dmitriymorozov.findfork.ui;
 
-import android.app.Service;
-import android.content.ComponentName;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.database.Cursor;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.ProgressBar;
-import android.widget.Toast;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import com.dmitriymorozov.findfork.MainApplication;
 import com.dmitriymorozov.findfork.R;
-import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.google.android.gms.maps.model.LatLng;
 
-public class MainActivity extends AppCompatActivity implements OnCameraMovedListener,
-		OnServiceListener {
+public class MainActivity extends AppCompatActivity{
 		private static final String TAG = "MyLogs MainActivity";
 
 		public static final boolean TOGGLE_MAP = true;
@@ -33,20 +22,6 @@ public class MainActivity extends AppCompatActivity implements OnCameraMovedList
 
 		@BindView(R.id.text_main_location) EditText mLocationText;
 		@BindView(R.id.btn_main_toggle_mode) CheckBox mToogleMode;
-		@BindView(R.id.progress_main_downloading) ProgressBar mDownloadingProgressBar;
-
-		private FoursquareService.LocalBinder mBinder;
-		private ServiceConnection mServiceConnection = new ServiceConnection() {
-				@Override public void onServiceConnected(ComponentName name, IBinder service) {
-						mBinder = (FoursquareService.LocalBinder) service;
-						Log.d(TAG, "onServiceConnected:");
-						mBinder.setOnDataDownloadListener(MainActivity.this);
-				}
-
-				@Override public void onServiceDisconnected(ComponentName name) {
-						mBinder = null;
-				}
-		};
 
 		private MapFragment mMapFragment = new MapFragment();
 		private ListFragment mListFragment = new ListFragment();
@@ -69,21 +44,6 @@ public class MainActivity extends AppCompatActivity implements OnCameraMovedList
 				}
 		}
 
-		@Override protected void onStart() {
-				super.onStart();
-				Intent intent = new Intent(this, FoursquareService.class);
-				bindService(intent, mServiceConnection, Service.BIND_AUTO_CREATE);
-		}
-
-		@Override protected void onStop() {
-				super.onStop();
-				unbindService(mServiceConnection);
-				mBinder = null;
-		}
-
-		//==============================================================================================
-
-
 		//==============================================================================================
 		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(CompoundButton view) {
 				boolean mode = view.isChecked();
@@ -94,27 +54,5 @@ public class MainActivity extends AppCompatActivity implements OnCameraMovedList
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, "map");
 				}
 				fragmentTransaction.commit();
-		}
-
-		@Override public void onCameraMove(LatLng southWest, LatLng northEast) {
-				Log.d(TAG, "onCameraMove:");
-				mDownloadingProgressBar.setVisibility(View.VISIBLE);
-				if(mBinder != null){
-						mBinder.downloadVenuesByRectangleFromApi(southWest, northEast);
-						//Download from localDB
-						Cursor venues = mBinder.getVenuesByRectangleFromDb(southWest, northEast);
-				}
-		}
-
-		@Override public void onNetworkJobsFinished() {
-				Log.d(TAG, "onServiceWorkFinished: ");
-				mDownloadingProgressBar.setVisibility(View.GONE);
-		}
-
-		@Override public void onNetworkError(int code, String errorType, String errorDetail) {
-				Log.d(TAG, "onServiceError: ");
-				mDownloadingProgressBar.setVisibility(View.GONE);
-				//TODO Change error handling for production. This is used while debugging only!
-				Toast.makeText(this, "error " + code + "\nError Type: " + errorType + "\nError Detail: " + errorDetail, Toast.LENGTH_LONG).show();
 		}
 }

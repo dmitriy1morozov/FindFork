@@ -93,6 +93,7 @@ public class MyContentProvider extends ContentProvider {
 
 		@Override public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs,
 				String sortOrder) {
+
 				String tableName;
 				Uri uriContent;
 

@@ -7,7 +7,6 @@
     tools:context="com.dmitriymorozov.findfork.ui.MainActivity">
 
 
-
     <android.support.design.widget.TextInputLayout
         android:id="@+id/textinput_main_location"
         android:layout_width="0dp"
