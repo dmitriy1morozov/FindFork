@@ -8,12 +8,14 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import com.dmitriymorozov.findfork.database.DBContract;
+import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.explorePOJO.FoursquareJSON;
 import com.dmitriymorozov.findfork.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.explorePOJO.Meta;
 import com.dmitriymorozov.findfork.explorePOJO.Venue;
 import com.dmitriymorozov.findfork.ui.OnServiceListener;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Locale;
@@ -155,36 +157,91 @@ public class FoursquareService extends Service {
 				//Release the objects
 				response = null;
 		}
+
+
+
+		/**
+		 * Utility method to expand the provided LatLng rectangle by the given coefficient
+		 */
+		private LatLngBounds expandRegionBy(LatLng southWest, LatLng northEast, double coef) {
+				double south = southWest.latitude;
+				double north = northEast.latitude;
+				double west = southWest.longitude;
+				double east = northEast.longitude;
+				double height = Math.abs(north - south);
+				double width = Math.abs(west - east);
+				double proportion = height / width;
+				double expandedArea = height * width * coef;
+				double expandedHeight = Math.sqrt(expandedArea * proportion);
+				double expandedWidth = Math.sqrt(expandedArea / proportion);
+				double widthDelta = (expandedWidth - width) / 2;
+				double heightDelta = (expandedHeight - height) / 2;
+				return new LatLngBounds(new LatLng(south - heightDelta, west - widthDelta), new LatLng(north + heightDelta, east + widthDelta));
+		}
 		//==============================================================================================
 		public class LocalBinder extends Binder {
 				public void setOnDataDownloadListener(OnServiceListener onDataDownloadListener){
 						mCallbackRef = new WeakReference<>(onDataDownloadListener);
 				}
 
-				//Api --> local DB layer
+				/**
+				 * Api --> local DB layer
+				 */
 				public void downloadVenuesByRectangleFromApi(LatLng southWest, LatLng northEast){
-						//TODO widen the rectangle by 300% to download more data
-						//TODO shrink database and rows that are outside 300% rectangle
+						LatLngBounds newBounds = expandRegionBy(southWest, northEast, 121);
 						Log.d(TAG, "downloadVenuesByRectangleFromApi: ");
-						String sw = String.format(Locale.US, "%s,%s", southWest.latitude, southWest.longitude);
-						String ne = String.format(Locale.US, "%s,%s", northEast.latitude, northEast.longitude);
+						String sw = String.format(Locale.US, "%s,%s", newBounds.southwest.latitude, newBounds.southwest.longitude);
+						String ne = String.format(Locale.US, "%s,%s", newBounds.northeast.latitude, newBounds.northeast.longitude);
 
 						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 50);
 						call.enqueue(new Callback<FoursquareJSON>() {
-								@Override public void onResponse(Call<FoursquareJSON> call,
-										Response<FoursquareJSON> response) {
+								@Override public void onResponse(@NonNull Call<FoursquareJSON> call,
+										@NonNull Response<FoursquareJSON> response) {
 										handleRetrofitResponse(response);
 								}
 
-								@Override public void onFailure(Call<FoursquareJSON> call, Throwable t) {
+								@Override public void onFailure(@NonNull Call<FoursquareJSON> call, @NonNull
+										Throwable t) {
 										Log.d(TAG, "Retrofit onFailure: " + t.getMessage());
 										String errorType = "Retrofit onFailure";
-										String errorDetail = "t.getMessage()";
+										String errorDetail = t.getMessage();
 										if(mCallbackRef != null && mCallbackRef.get() != null){
 												mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
 										}
 								}
 						});
+				}
+
+				/**
+				 * Removes from localDB all rows that are outside of provided rectangle multipled by coef
+				 */
+				//
+				public void cleanLocalDb(LatLng southWest, LatLng northEast) {
+						//TODO POSSIBLE CPU consuming operation put into AsyncTask (or thread)
+						LatLngBounds newBounds = expandRegionBy(southWest, northEast, 121);
+						double south = newBounds.southwest.latitude;
+						double north = newBounds.northeast.latitude;
+						double west = newBounds.southwest.longitude;
+						double east = newBounds.northeast.longitude;
+
+						String selectionLat;
+						String selectionLng;
+
+						//Latitude selection
+						selectionLat = String.format(Locale.US, "%s < ? OR %s > ?", DBContract.VENUE_LAT, DBContract.VENUE_LAT);
+						String[] selectionArgsLat = {String.valueOf(south), String.valueOf(north)};
+						getContentResolver().delete(MyContentProvider.URI_CONTENT_VENUES, selectionLat, selectionArgsLat);
+
+						//Longitude selection
+						if(west < east){
+								selectionLng = String.format(Locale.US, "%s < ? OR %s > ?", DBContract.VENUE_LNG, DBContract.VENUE_LNG);
+								String[] selectionArgsLng = {String.valueOf(west), String.valueOf(east)};
+								getContentResolver().delete(MyContentProvider.URI_CONTENT_VENUES, selectionLng, selectionArgsLng);
+						} else{
+								selectionLng = String.format(Locale.US, "(%s < ? AND %s > ?) OR (%s < ? AND %s > ?)", DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG);
+								String[] selectionArgsLng = {String.valueOf(west), "0" , "0", String.valueOf(east)};
+								getContentResolver().delete(MyContentProvider.URI_CONTENT_VENUES, selectionLng, selectionArgsLng);
+						}
 				}
 		}
 }

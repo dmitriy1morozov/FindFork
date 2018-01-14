@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -37,6 +38,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
@@ -44,22 +46,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 
-public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnCameraIdleListener, OnServiceListener,
-		LoaderManager.LoaderCallbacks<Cursor>, GoogleMap.OnMarkerClickListener {
+public class MapFragment extends Fragment
+		implements OnMapReadyCallback, GoogleMap.OnCameraIdleListener, OnServiceListener,
+		LoaderManager.LoaderCallbacks<Cursor>, GoogleMap.OnMarkerClickListener,
+		SeekBar.OnSeekBarChangeListener {
 		private static final String TAG = "MyLogs MapFragment";
-		private static final String URI_CONTENT = "uriContent";
-		private static final String LATITUDE_TOP = "latitudeTop";
-		private static final String LATITUDE_BOTTOM = "latitudeBottom";
-		private static final String LONGITUDE_LEFT = "longitudeLeft";
-		private static final String LONGITUDE_RIGHT = "longitudeRight";
 
 		private ProgressBar mLoadingProgress;
 		private GoogleMap mMap;
+		private SeekBar mRatingSeekbar;
+		private TextView mRatingFilterTextView;
 
+		private double mMinRatingFilter;
 		private ContentObserver mContentObserver;
 		private HashMap<String, Marker> mVenues = new HashMap<>();
-		private ArrayList<Marker> mVenuesTopRanked = new ArrayList<>();
-		private double mMinRatingFilter;
 
 		private FoursquareService.LocalBinder mBinder;
 		private ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -79,43 +79,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
 		@Override public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
-				ConstraintLayout rootView = (ConstraintLayout) inflater.inflate(R.layout.fragment_map, container, false);
+				ConstraintLayout rootView =
+						(ConstraintLayout) inflater.inflate(R.layout.fragment_map, container, false);
 				MapView mapView = rootView.findViewById(R.id.map_googleMap);
 				mapView.onCreate(savedInstanceState);
 				mapView.onResume();
 				try {
 						MapsInitializer.initialize(getActivity().getApplicationContext());
-				}catch (Exception e){
+				} catch (Exception e) {
 						Log.d(TAG, "onCreateView: " + e.getMessage());
 				}
 
+				mLoadingProgress = rootView.findViewById(R.id.progress_map);
+				mRatingFilterTextView = rootView.findViewById(R.id.text_map_rating_filter);
+				mRatingSeekbar = rootView.findViewById(R.id.seekbar_map_rating_filter);
+
+				mLoadingProgress.setVisibility(View.GONE);
+				mMinRatingFilter = (mRatingSeekbar.getMax() - mRatingSeekbar.getProgress()) / 10.0;
+				mRatingSeekbar.setOnSeekBarChangeListener(this);
+
 				mVenues.clear();
 				mapView.getMapAsync(this);
-
-				mLoadingProgress = rootView.findViewById(R.id.progress_map);
-				mLoadingProgress.setVisibility(View.GONE);
-				final TextView ratingFilterValueText = rootView.findViewById(R.id.text_map_rating_filter);
-				SeekBar ratingSeekbar = rootView.findViewById(R.id.seekbar_map_rating_filter);
-				final int maxRating = ratingSeekbar.getMax();
-				mMinRatingFilter = (maxRating - ratingSeekbar.getProgress())/ 10.0;
-
-				ratingSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-						@Override
-						public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-								mMinRatingFilter = (maxRating - progress)/ 10.0;
-								String ratingFilterText = String.format(Locale.US, "%.1f", mMinRatingFilter);
-								ratingFilterValueText.setText(ratingFilterText);
-						}
-
-						@Override public void onStartTrackingTouch(SeekBar seekBar) {
-								ratingFilterValueText.animate().alpha(1.0f);
-						}
-
-						@Override public void onStopTrackingTouch(SeekBar seekBar) {
-								//TODO Hide low rating venues
-								ratingFilterValueText.animate().alpha(0.0f);
-						}
-				});
 				return rootView;
 		}
 
@@ -133,14 +117,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 						@Override public void onChange(boolean selfChange) {
 								super.onChange(selfChange);
 								Log.d(TAG, "ContentObserver onChange: ");
-								getActivity().getSupportLoaderManager().getLoader(0).forceLoad();
+								FragmentActivity activity = getActivity();
+								if (activity != null) {
+										activity.getSupportLoaderManager().getLoader(CursorLoaderQuery.ID_MAP).forceLoad();
+								}
 						}
 
 						@Override public void onChange(boolean selfChange, Uri uri) {
 								super.onChange(selfChange, uri);
 						}
 				};
-				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true, mContentObserver);
+				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true,
+						mContentObserver);
 		}
 
 		@Override public void onStop() {
@@ -153,12 +141,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 		//==============================================================================================
 		@Override public void onMapReady(final GoogleMap googleMap) {
 				mMap = googleMap;
-				LatLng position = ((MainApplication)getActivity().getApplicationContext()).mCenter;
-				float zoom = ((MainApplication)getActivity().getApplicationContext()).mCameraZoom;
-				//TODO Handle permissions
-				//mMap.setMyLocationEnabled(true);
-				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
 				mMap.setOnCameraIdleListener(this);
+				LatLng position = ((MainApplication) getActivity().getApplicationContext()).mCenter;
+				float zoom = ((MainApplication) getActivity().getApplicationContext()).mCameraZoom;
+				if(position != null){
+						mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
+				}
+				else{
+						//TODO debug3ging only
+						//Toast.makeText(getActivity(), "OnMapReady() position not known", Toast.LENGTH_SHORT).show();
+				}
 		}
 
 		@Override public void onCameraIdle() {
@@ -174,18 +166,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 				LatLng southWest = visibleRegion.nearLeft;
 				LatLng northEast = visibleRegion.farRight;
 
-				mLoadingProgress.setVisibility(View.VISIBLE);
 				if(mBinder != null){
+						mBinder.cleanLocalDb(southWest, northEast);
 						mBinder.downloadVenuesByRectangleFromApi(southWest, northEast);
-						//Download from localDB using CursorLoader
-						Bundle args = new Bundle();
-						args.putString(URI_CONTENT, MyContentProvider.URI_CONTENT_VENUES.toString());
-						args.putDouble(LATITUDE_TOP, northEast.latitude);
-						args.putDouble(LATITUDE_BOTTOM, southWest.latitude);
-						args.putDouble(LONGITUDE_LEFT, southWest.longitude);
-						args.putDouble(LONGITUDE_RIGHT, northEast.longitude);
-						getActivity().getSupportLoaderManager().restartLoader(0, args, MapFragment.this);
+						mLoadingProgress.setVisibility(View.VISIBLE);
 				}
+				//Download from localDB using CursorLoader
+				getActivity().getSupportLoaderManager().restartLoader(CursorLoaderQuery.ID_MAP, null, MapFragment.this);
 		}
 
 		//==============================================================================================
@@ -204,52 +191,58 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 
 		@Override public android.support.v4.content.Loader<Cursor> onCreateLoader(int id, Bundle args) {
 				Log.d(TAG, "onCreateLoader: ");
-				Uri uri = Uri.parse(args.getString(URI_CONTENT));
-				double bottomLat = args.getDouble(LATITUDE_BOTTOM);
-				double topLat = args.getDouble(LATITUDE_TOP);
-				double leftLng = args.getDouble(LONGITUDE_LEFT);
-				double rightLng = args.getDouble(LONGITUDE_RIGHT);
+
+				Uri uri = MyContentProvider.URI_CONTENT_VENUES;
+				VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
+				LatLng southWest = visibleRegion.nearLeft;
+				LatLng northEast = visibleRegion.farRight;
+				double south = southWest.latitude;
+				double north = northEast.latitude;
+				double west = southWest.longitude;
+				double east = northEast.longitude;
 
 				String selectionLng;
 				String selectionLat;
 				ArrayList<String> selectionArgsList = new ArrayList<>();
 				String sortOrder = String.format(Locale.US, "%s DESC", DBContract.VENUE_RATING);
 
+				//Latitude selection
 				selectionLat = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LAT, DBContract.VENUE_LAT);
-				selectionArgsList.add(String.valueOf(bottomLat));
-				selectionArgsList.add(String.valueOf(topLat));
+				selectionArgsList.add(String.valueOf(south));
+				selectionArgsList.add(String.valueOf(north));
 
-				if(leftLng < rightLng){
+				//Longitude selection
+				if(west < east){
 						selectionLng = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LNG, DBContract.VENUE_LNG);
-						selectionArgsList.add(String.valueOf(leftLng));
-						selectionArgsList.add(String.valueOf(rightLng));
+						selectionArgsList.add(String.valueOf(west));
+						selectionArgsList.add(String.valueOf(east));
 				} else{
 						selectionLng = String.format(Locale.US, "(%s > ? AND %s < ?) OR (%s > ? AND %s < ?)", DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG);
-						selectionArgsList.add(String.valueOf(leftLng));
+						selectionArgsList.add(String.valueOf(west));
 						selectionArgsList.add(String.valueOf(0));
 						selectionArgsList.add(String.valueOf(0));
-						selectionArgsList.add(String.valueOf(rightLng));
+						selectionArgsList.add(String.valueOf(east));
 				}
 
-				String selection = String.format(Locale.US, "%s AND %s", selectionLat, selectionLng);
+				//Rating filter selection
+				String selectionRating = String.format(Locale.US, "%s >= ?", DBContract.VENUE_RATING);
+				selectionArgsList.add(String.valueOf(mMinRatingFilter));
+
+				//Selection concatenation
+				String selection = String.format(Locale.US, "%s AND %s AND %s", selectionLat, selectionLng, selectionRating);
 				String[] selectionArgs = new String[selectionArgsList.size()];
 				selectionArgsList.toArray(selectionArgs);
-				return new MyCursorLoader(getActivity(), uri, null, selection, selectionArgs, sortOrder);
+				return new CursorLoaderQuery(getActivity(), uri, null, selection, selectionArgs, sortOrder);
 		}
 
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
-				unhighlightTopRankedVenues();
+				mMap.clear();
+				mVenues.clear();
 				addVenuesMarkersOnMap(data);
 				highlightTopRankedVenues(data);
 		}
-		private void unhighlightTopRankedVenues() {
-				BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
-				for (Marker marker:mVenuesTopRanked) {
-						marker.setIcon(bitmapDescriptor);
-				}
-				mVenuesTopRanked.clear();
-		}
+
 		private void addVenuesMarkersOnMap(Cursor venues) {
 				//FIXME processor consuming operation. Put into a separate thread
 				Log.d(TAG, "addVenuesMarkersOnMap: ");
@@ -293,7 +286,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 								}
 								Marker topRankedVenue = mVenues.get(id);
 								topRankedVenue.setIcon(bitmapDescriptor);
-								mVenuesTopRanked.add(topRankedVenue);
 						}while(venues.moveToNext());
 				}
 		}
@@ -303,12 +295,35 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, GoogleM
 		}
 
 		@Override public boolean onMarkerClick(Marker marker) {
-				//TODO show details about the venue
 				FragmentTransaction fragmentTransaction = getActivity().getSupportFragmentManager().beginTransaction();
 				DetailsFragment detailsFragment = new DetailsFragment();
-				//detailsFragment.setRetainInstance(true);
-				detailsFragment.setmVenueId(String.valueOf(marker.getTag()));
+				detailsFragment.setVenueId(String.valueOf(marker.getTag()));
 				detailsFragment.show(fragmentTransaction, "venueDetails");
 				return false;
+		}
+
+		@Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				mMinRatingFilter = (mRatingSeekbar.getMax() - progress) / 10.0;
+				String ratingFilterText = String.format(Locale.US, "%.1f", mMinRatingFilter);
+				mRatingFilterTextView.setText(ratingFilterText);
+				Log.d(TAG, "SeekBar onProgressChanged: ");
+		}
+
+		@Override public void onStartTrackingTouch(SeekBar seekBar) {
+				mRatingFilterTextView.animate().alpha(1.0f);
+		}
+
+		@Override public void onStopTrackingTouch(SeekBar seekBar) {
+				mRatingFilterTextView.animate().alpha(0.0f);
+				handleVisibleRectangle();
+		}
+
+		public void moveCamera(LatLngBounds bounds){
+				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
+		}
+
+		public void
+		moveCamera(LatLng center, float zoom){
+				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, zoom));
 		}
 }

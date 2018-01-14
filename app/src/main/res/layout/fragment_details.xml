@@ -4,7 +4,6 @@
 		xmlns:app="http://schemas.android.com/apk/res-auto"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		xmlns:tools="http://schemas.android.com/tools"
 		android:padding="8dp"
 		>
 
@@ -111,6 +110,39 @@
 				android:text="No price tag"
 				/>
 
+		<View
+				android:id="@+id/view_details_stroke_left"
+				android:layout_width="0dp"
+				android:layout_height="2dp"
+				app:layout_constraintLeft_toLeftOf="parent"
+				app:layout_constraintRight_toLeftOf="@+id/text_details_rateme"
+				app:layout_constraintTop_toTopOf="@+id/text_details_rateme"
+				app:layout_constraintBottom_toBottomOf="@+id/text_details_rateme"
+				android:background="@android:color/black"
+				/>
+		<TextView
+				android:id="@+id/text_details_rateme"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="32dp"
+				android:padding="2dp"
+				app:layout_constraintRight_toLeftOf="@id/view_details_stroke_right"
+				app:layout_constraintLeft_toRightOf="@id/view_details_stroke_left"
+				app:layout_constraintTop_toBottomOf="@id/text_details_price"
+				android:text="Rate this place"
+				android:textSize="18sp"
+				/>
+		<View
+				android:id="@+id/view_details_stroke_right"
+				android:layout_width="0dp"
+				android:layout_height="2dp"
+				app:layout_constraintRight_toRightOf="parent"
+				app:layout_constraintLeft_toRightOf="@+id/text_details_rateme"
+				app:layout_constraintTop_toTopOf="@+id/text_details_rateme"
+				app:layout_constraintBottom_toBottomOf="@+id/text_details_rateme"
+				android:background="@android:color/black"
+				/>
+
 		<android.support.v7.widget.AppCompatSeekBar
 				android:id="@+id/seekbar_details_rating"
 				android:layout_width="0dp"
@@ -120,7 +152,7 @@
 				android:thumb="@android:drawable/star_on"
 				app:layout_constraintLeft_toLeftOf="parent"
 				app:layout_constraintRight_toRightOf="parent"
-				app:layout_constraintTop_toBottomOf="@id/text_details_price"
+				app:layout_constraintTop_toBottomOf="@id/text_details_rateme"
 				/>
 		<TextView
 				android:id="@+id/text_details_rating_value"
@@ -136,7 +168,7 @@
 				/>
 
 		<android.support.design.widget.TextInputLayout
-				android:id="@+id/textinput_details_user"
+				android:id="@+id/textinput_details_rating_submitter"
 				android:layout_width="0dp"
 				android:layout_height="wrap_content"
 				app:layout_constraintTop_toBottomOf="@id/seekbar_details_rating"
@@ -147,7 +179,7 @@
 				>
 
 				<EditText
-						android:id="@+id/text_details_user"
+						android:id="@+id/text_details_rating_submitter"
 						android:layout_width="match_parent"
 						android:layout_height="wrap_content"
 						android:inputType="textPersonName"
@@ -159,10 +191,10 @@
 				android:id="@+id/button_details_submit"
 				android:layout_width="32dp"
 				android:layout_height="32dp"
-				app:layout_constraintLeft_toRightOf="@id/textinput_details_user"
+				app:layout_constraintLeft_toRightOf="@id/textinput_details_rating_submitter"
 				app:layout_constraintRight_toRightOf="parent"
-				app:layout_constraintTop_toTopOf="@id/textinput_details_user"
-				app:layout_constraintBottom_toBottomOf="@id/textinput_details_user"
+				app:layout_constraintTop_toTopOf="@id/textinput_details_rating_submitter"
+				app:layout_constraintBottom_toBottomOf="@id/textinput_details_rating_submitter"
 				android:background="@android:drawable/ic_menu_save"
 				android:backgroundTint="@android:color/black"
 				/>

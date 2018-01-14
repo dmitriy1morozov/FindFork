@@ -4,7 +4,7 @@ import javax.annotation.Generated;
 import com.google.gson.annotations.SerializedName;
 
 @Generated("com.robohorse.robopojogenerator")
-public class LabeledLatLngsItem{
+class LabeledLatLngsItem{
 
 	@SerializedName("lng")
 	private double lng;

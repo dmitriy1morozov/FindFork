@@ -1,5 +1,7 @@
 package com.dmitriymorozov.findfork.ui;
 
+import android.app.Dialog;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -9,6 +11,7 @@ import android.support.v4.app.DialogFragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v7.widget.AppCompatSeekBar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,8 +21,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import butterknife.Unbinder;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
@@ -39,13 +44,13 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		@BindView(R.id.text_details_price_description) TextView mPriceDescriptionTextView;
 		@BindView(R.id.seekbar_details_rating) AppCompatSeekBar mRatingSeekBar;
 		@BindView(R.id.text_details_rating_value) TextView mRatingTextView;
-		@BindView(R.id.text_details_user) EditText mUserEditText;
+		@BindView(R.id.text_details_rating_submitter) EditText mRatingSubmitterEditText;
 		@BindView(R.id.button_details_submit) Button mSubmitButton;
-		Unbinder mUnbinder;
+		private Unbinder mUnbinder;
 
 		private String mVenueId;
 
-		public void setmVenueId(String mVenueId) {
+		public void setVenueId(String mVenueId) {
 				this.mVenueId = mVenueId;
 		}
 
@@ -56,7 +61,6 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 						mVenueId = savedInstanceState.getString(VENUE_ID_KEY);
 				}
 
-				Log.d(TAG, "onCreateView: ");
 				getDialog().getWindow().requestFeature(Window.FEATURE_NO_TITLE);
 				View rootView = inflater.inflate(R.layout.fragment_details, container, false);
 				mUnbinder = ButterKnife.bind(this, rootView);
@@ -64,11 +68,16 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 				Bundle generalBundle = new Bundle();
 				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
-				Bundle detailsBundle = new Bundle();
-				detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
-				getActivity().getSupportLoaderManager().restartLoader(0, generalBundle, DetailsFragment.this);
-				getActivity().getSupportLoaderManager().restartLoader(1, detailsBundle, DetailsFragment.this);
+				getActivity().getSupportLoaderManager().restartLoader(CursorLoaderQuery.ID_VENUE_GENERAL, generalBundle, DetailsFragment.this);
 				return rootView;
+		}
+
+		@Override public void onStart() {
+				super.onStart();
+				Dialog dialog = getDialog();
+				if(dialog != null){
+						dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+				}
 		}
 
 		@Override public void onDestroyView() {
@@ -98,10 +107,12 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 
 		@Override public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+				Log.d(TAG, "onCreateLoader: ");
 				Uri contentUri = Uri.parse(args.getString("uri"));
 				String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 				String[] selectionArgs = { mVenueId };
-				return new MyCursorLoader(getActivity(), contentUri, null, selection, selectionArgs, null);
+
+				return new CursorLoaderQuery(getActivity(), contentUri, null, selection, selectionArgs, null);
 		}
 
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
@@ -117,6 +128,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		 * venueName, venueRating, venueRatingSubmitter
 		 */
 		private boolean parseGeneral(Cursor data) {
+				Log.d(TAG, "parseGeneral: ");
 				if(data != null && data.moveToFirst() && data.getColumnIndex(DBContract.VENUE_NAME) != -1){
 						int indexName = data.getColumnIndex(DBContract.VENUE_NAME);
 						int indexRating = data.getColumnIndex(DBContract.VENUE_RATING);
@@ -129,14 +141,18 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 						mNameTextView.setText(name);
 						mRatingSeekBar.setProgress(ratingBar);
-						mRatingTextView.setText(ratingSubmitter);
+						mRatingSubmitterEditText.setText(ratingSubmitter);
+
+						Bundle detailsBundle = new Bundle();
+						detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
+						getActivity().getSupportLoaderManager().restartLoader(CursorLoaderQuery.ID_VENUE_DETAILS, detailsBundle, DetailsFragment.this);
 						return true;
 				}
-
 				return false;
 		}
 
 		private void parseDetails(Cursor data) {
+				Log.d(TAG, "parseDetails: ");
 				if(data != null && data.moveToFirst()){
 						int indexAddress = data.getColumnIndex(DBContract.DETAILS_ADDRESS_FORMATTED);
 						int indexPhone = data.getColumnIndex(DBContract.DETAILS_PHONE);
@@ -182,30 +198,53 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 										mPriceDescriptionTextView.setTextColor(getResources().getColor(android.R.color.black));
 										break;
 						}
-
-						mSiteTextView.setOnClickListener(onSiteClickListener);
-						mPhoneTextView.setOnClickListener(onPhoneClickListener);
 				}
 		}
 
 		@Override public void onLoaderReset(Loader<Cursor> loader) {
-
+				Log.d(TAG, "onLoaderReset: ");
 		}
 		//----------------------------------------------------------------------------------------------
-		private final View.OnClickListener onSiteClickListener = new View.OnClickListener() {
-				public void onClick(final View view) {
-						String url = ((TextView)view).getText().toString();
-						Intent intent = new Intent(Intent.ACTION_VIEW);
-						intent.setData(Uri.parse(url));
-						startActivity(intent);
+		@OnClick({R.id.text_details_site, R.id.image_details_site}) void onSiteClick(){
+				String url = mSiteTextView.getText().toString();
+				if(TextUtils.isEmpty(url)){
+						return;
 				}
-		};
-		private final View.OnClickListener onPhoneClickListener = new View.OnClickListener() {
-				public void onClick(final View view) {
-						String phone = view.getTag().toString();
-						Uri phoneUri = Uri.parse("tel:" + phone);
-						Intent intent = new Intent(Intent.ACTION_DIAL, phoneUri);
-						startActivity(intent);
+				Intent intent = new Intent(Intent.ACTION_VIEW);
+				intent.setData(Uri.parse(url));
+				startActivity(intent);
+		}
+
+		@OnClick({R.id.text_details_phone, R.id.image_details_phone}) void onPhoneClick(){
+				Object phone = mPhoneTextView.getText();
+				if(TextUtils.isEmpty(phone.toString())){
+						return;
 				}
-		};
+				Uri phoneUri = Uri.parse("tel:" + phone);
+				Intent intent = new Intent(Intent.ACTION_DIAL, phoneUri);
+				startActivity(intent);
+		}
+
+		@OnClick(R.id.button_details_submit) void onUpdateRatingClick(){
+				if(TextUtils.isEmpty(mRatingSubmitterEditText.getText())){
+						Toast.makeText(getActivity(), "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
+				} else{
+						String ratingString = mRatingTextView.getText().toString();
+						double rating;
+						if(TextUtils.isEmpty(ratingString)){
+								rating = 0;
+						}else{
+								rating = Double.parseDouble(ratingString);
+						}
+						String submitter = mRatingSubmitterEditText.getText().toString();
+						ContentValues contentValues = new ContentValues();
+						contentValues.put(DBContract.VENUE_RATING, rating);
+						contentValues.put(DBContract.VENUE_RATING_SUBMITTER, submitter);
+						String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
+						String[] selectionArgs = new String[]{mVenueId};
+
+						getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
+						DetailsFragment.this.dismiss();
+				}
+		}
 }

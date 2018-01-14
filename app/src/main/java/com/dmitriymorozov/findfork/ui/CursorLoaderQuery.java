@@ -6,15 +6,19 @@ import android.net.Uri;
 import android.support.v4.content.CursorLoader;
 import android.util.Log;
 
-public class MyCursorLoader extends CursorLoader {
-		private static final String TAG = "MyLogs MyCursorLoader";
+class CursorLoaderQuery extends CursorLoader {
+		private static final String TAG = "MyLogs Query";
+
+		static final int ID_MAP = 1;
+		static final int ID_VENUE_GENERAL = 2;
+		static final int ID_VENUE_DETAILS = 3;
 
 		private Uri mUri;
 		private String mSelection = null;
 		private String[] mSelectionArgs = null;
 		private String mSortOrder = null;
 
-		public MyCursorLoader(Context context, Uri uri, String[] projection, String selection,
+		public CursorLoaderQuery(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {
 				super(context, uri, projection, selection, selectionArgs, sortOrder);
 				mUri = uri;

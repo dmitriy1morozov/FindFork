@@ -8,7 +8,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.util.Log;
-import java.io.File;
 import java.util.Locale;
 import android.support.annotation.NonNull;
 
@@ -82,13 +81,44 @@ public class MyContentProvider extends ContentProvider {
 		}
 
 		@Override public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
-				// Implement this to handle requests to delete one or more rows.
-				throw new UnsupportedOperationException("Not yet implemented");
+				mSqliteDatabase = mDbHelper.getWritableDatabase();
+				int rowsRemoved;
+
+				switch (sUriMatcher.match(uri)){
+						case URI_MATCH_VENUE_MULTIPLE:
+								rowsRemoved = mSqliteDatabase.delete(TABLE_VENUES, selection, selectionArgs);
+
+								Log.d(TAG, "delete: rows removed = " + rowsRemoved);
+								break;
+						default:
+								Log.d(TAG, "delete: WRONG URI! Uri = " + uri);
+								return -1;
+				}
+
+				if(getContext() != null){
+						getContext().getContentResolver().notifyChange(uri, null);
+				}
+				return rowsRemoved;
 		}
 
 		@Override public int update(@NonNull Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-				// TODO: Implement this to handle requests to update one or more rows.
-				throw new UnsupportedOperationException("Not yet implemented");
+				mSqliteDatabase = mDbHelper.getWritableDatabase();
+				int rowsUpdated;
+
+				switch (sUriMatcher.match(uri)){
+						case URI_MATCH_VENUE_MULTIPLE:
+								rowsUpdated = mSqliteDatabase.update(TABLE_VENUES, values, selection, selectionArgs);
+								break;
+						default:
+								Log.d(TAG, "insert: WRONG URI! Uri = " + uri);
+								return -1;
+				}
+
+				if(getContext() != null){
+						getContext().getContentResolver().notifyChange(uri, null);
+				}
+
+				return rowsUpdated;
 		}
 
 		@Override public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs,
@@ -144,14 +174,5 @@ public class MyContentProvider extends ContentProvider {
 						default:
 								return null;
 				}
-		}
-
-		//==============================================================================================
-		//TODO method to calculate db size and shrink. Remove if not used
-		private long getDatabaseSize(){
-				if(!mSqliteDatabase.isOpen()){
-						mSqliteDatabase = mDbHelper.getWritableDatabase();
-				}
-				return new File(mSqliteDatabase.getPath()).length();
 		}
 }

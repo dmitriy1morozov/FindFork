@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 
-public interface ApiFoursquare {
+interface ApiFoursquare {
 
 		String BASE_URL = "https://api.foursquare.com/v2/venues/";
 		long VERSION = 20180102;

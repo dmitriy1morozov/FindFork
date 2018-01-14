@@ -22,4 +22,9 @@ class DBHelper extends SQLiteOpenHelper {
 
 		@Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 		}
+
+		@Override
+		public void onConfigure(SQLiteDatabase db){
+				db.setForeignKeyConstraintsEnabled(true);
+		}
 }

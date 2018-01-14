@@ -40,7 +40,7 @@ public class DBContract{
 						+ "(%s text primary key, "
 						+ "%s text, %s text, %s text, %s text, "
 						+ "%s integer, %s text, %s text, "
-						+ "foreign key (%s) references %s(%s), "
+						+ "foreign key (%s) references %s (%s) ON DELETE CASCADE, "
 						+ "UNIQUE(%s));",
 				TABLE_DETAILS,
 				VENUE_ID,
