@@ -3,10 +3,4 @@
 		<string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">
 				AIzaSyCr7tCTqjWU9SARpa-NSgbKe38yk287uNk
 		</string>
-		<string name="foursquare_client_id" templateMergeStrategy="preserve" translatable="false">
-				Z5QQULAXLH33K4G21YD1JSXZ3K4IGZLLVS1QMCEGRV3CGK4K
-		</string>
-		<string name="foursquare_secret" templateMergeStrategy="preserve" translatable="false">
-				OYHK43EOG4EGFNFUERWV2BOTW0LY3BGBTDXTYPLMXHTFACFE
-		</string>
 </resources>

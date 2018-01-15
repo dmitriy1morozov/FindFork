@@ -48,9 +48,6 @@ public class MyContentProvider extends ContentProvider {
 		private SQLiteDatabase mSqliteDatabase;
 
 		//----------------------------------------------------------------------------------------------
-		public MyContentProvider() {
-		}
-
 		@Override public boolean onCreate() {
 				Log.d(TAG, "onCreate: ");
 				mDbHelper = new DBHelper(getContext());

@@ -3,6 +3,7 @@ package com.dmitriymorozov.findfork.ui;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.database.ContentObserver;
@@ -11,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -53,62 +55,76 @@ public class MapFragment extends Fragment
 		private static final String TAG = "MyLogs MapFragment";
 
 		private ProgressBar mLoadingProgress;
+		private MapView mMapView;
 		private GoogleMap mMap;
 		private SeekBar mRatingSeekbar;
 		private TextView mRatingFilterTextView;
 
+		private Context mParentContext;
 		private double mMinRatingFilter;
 		private ContentObserver mContentObserver;
-		private HashMap<String, Marker> mVenues = new HashMap<>();
+		private HashMap<String, Marker> mVenues;
 
 		private FoursquareService.LocalBinder mBinder;
-		private ServiceConnection mServiceConnection = new ServiceConnection() {
+		private final ServiceConnection mServiceConnection = new ServiceConnection() {
 				@Override public void onServiceConnected(ComponentName name, IBinder service) {
 						mBinder = (FoursquareService.LocalBinder) service;
 						Log.d(TAG, "onServiceConnected:");
 						mBinder.setOnDataDownloadListener(MapFragment.this);
 				}
-
 				@Override public void onServiceDisconnected(ComponentName name) {
 						mBinder = null;
 				}
 		};
 
-		public MapFragment() {
+		@Override public void onAttach(Context context) {
+				Log.d(TAG, "onAttach: ");
+				super.onAttach(context);
+				mParentContext = context;
 		}
 
 		@Override public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
-				ConstraintLayout rootView =
-						(ConstraintLayout) inflater.inflate(R.layout.fragment_map, container, false);
-				MapView mapView = rootView.findViewById(R.id.map_googleMap);
-				mapView.onCreate(savedInstanceState);
-				mapView.onResume();
-				try {
-						MapsInitializer.initialize(getActivity().getApplicationContext());
-				} catch (Exception e) {
-						Log.d(TAG, "onCreateView: " + e.getMessage());
-				}
-
+				Log.d(TAG, "onCreateView: ");
+				ConstraintLayout rootView = (ConstraintLayout) inflater.inflate(R.layout.fragment_map, container, false);
+				mMapView = rootView.findViewById(R.id.map_googleMap);
 				mLoadingProgress = rootView.findViewById(R.id.progress_map);
 				mRatingFilterTextView = rootView.findViewById(R.id.text_map_rating_filter);
 				mRatingSeekbar = rootView.findViewById(R.id.seekbar_map_rating_filter);
-
 				mLoadingProgress.setVisibility(View.GONE);
 				mMinRatingFilter = (mRatingSeekbar.getMax() - mRatingSeekbar.getProgress()) / 10.0;
 				mRatingSeekbar.setOnSeekBarChangeListener(this);
-
-				mVenues.clear();
-				mapView.getMapAsync(this);
+				if(mVenues != null){
+						mVenues.clear();
+				} else{
+						mVenues = new HashMap<>();
+				}
 				return rootView;
 		}
 
-		@Override public void onStart() {
-				super.onStart();
-				Intent intent = new Intent(getActivity(), FoursquareService.class);
-				getActivity().bindService(intent, mServiceConnection, Service.BIND_AUTO_CREATE);
+		@Override public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+				super.onActivityCreated(savedInstanceState);
+				try {
+						MapsInitializer.initialize(mParentContext.getApplicationContext());
+				} catch (Exception e) {
+						Log.d(TAG, "onCreateView: " + e.getMessage());
+				}
+				mMapView.onCreate(savedInstanceState);
+		}
 
-				ContentResolver contentResolver = getActivity().getContentResolver();
+		@Override public void onStart() {
+				Log.d(TAG, "onStart: ");
+				super.onStart();
+				mMapView.onStart();
+				//FIXME! WHY???
+				//TODO this is required to handle map moves when MapView is supposed to be paused (e.g. handling PlaceAutoComplete)
+				mMapView.onResume();
+				mMapView.getMapAsync(this);
+
+				Intent intent = new Intent(mParentContext, FoursquareService.class);
+				mParentContext.bindService(intent, mServiceConnection, Service.BIND_AUTO_CREATE);
+
+				ContentResolver contentResolver = mParentContext.getContentResolver();
 				mContentObserver = new ContentObserver(new Handler()) {
 						@Override public boolean deliverSelfNotifications() {
 								return super.deliverSelfNotifications();
@@ -117,47 +133,85 @@ public class MapFragment extends Fragment
 						@Override public void onChange(boolean selfChange) {
 								super.onChange(selfChange);
 								Log.d(TAG, "ContentObserver onChange: ");
-								FragmentActivity activity = getActivity();
-								if (activity != null) {
-										activity.getSupportLoaderManager().getLoader(CursorLoaderQuery.ID_MAP).forceLoad();
+								//FragmentActivity activity = getActivity();
+								if (mParentContext != null) {
+										((FragmentActivity)mParentContext).getSupportLoaderManager().getLoader(CursorLoaderQuery.ID_MAP).forceLoad();
 								}
 						}
 
 						@Override public void onChange(boolean selfChange, Uri uri) {
+								Log.d(TAG, "onChange: ");
 								super.onChange(selfChange, uri);
 						}
 				};
-				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true,
-						mContentObserver);
+				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true, mContentObserver);
+		}
+
+		@Override public void onResume() {
+				Log.d(TAG, "onResume: ");
+				super.onResume();
+				//mMapView.onResume();
+				//mMapView.getMapAsync(this);
+		}
+
+		@Override public void onPause() {
+				Log.d(TAG, "onPause: ");
+				super.onPause();
+				//mMapView.onPause();
 		}
 
 		@Override public void onStop() {
+				Log.d(TAG, "onStop: ");
 				super.onStop();
-				getActivity().unbindService(mServiceConnection);
+				mParentContext.unbindService(mServiceConnection);
 				mBinder = null;
-				getActivity().getContentResolver().unregisterContentObserver(mContentObserver);
+				mParentContext.getContentResolver().unregisterContentObserver(mContentObserver);
+				mMapView.onPause();
+				mMapView.onStop();
+		}
+
+		@Override public void onDestroy() {
+				Log.d(TAG, "onDestroy: ");
+				super.onDestroy();
+				mMapView.onDestroy();
+		}
+
+		@Override public void onDetach() {
+				Log.d(TAG, "onDetach: ");
+				super.onDetach();
+				mParentContext = null;
+				mVenues.clear();
 		}
 
 		//==============================================================================================
 		@Override public void onMapReady(final GoogleMap googleMap) {
+				Log.d(TAG, "onMapReady: ");
 				mMap = googleMap;
 				mMap.setOnCameraIdleListener(this);
-				LatLng position = ((MainApplication) getActivity().getApplicationContext()).mCenter;
-				float zoom = ((MainApplication) getActivity().getApplicationContext()).mCameraZoom;
+
+				if(mParentContext == null){
+						return;
+				}
+				LatLng position = ((MainApplication)mParentContext.getApplicationContext()).mCenter;
+				float zoom = ((MainApplication) mParentContext.getApplicationContext()).mCameraZoom;
 				if(position != null){
 						mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
 				}
 				else{
-						//TODO debug3ging only
-						//Toast.makeText(getActivity(), "OnMapReady() position not known", Toast.LENGTH_SHORT).show();
+						mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(MainActivity.LOCATION_DEFAULT, MainActivity.ZOOM_DEFAULT));
 				}
 		}
 
 		@Override public void onCameraIdle() {
+				Log.d(TAG, "onCameraIdle: ");
 				LatLng currentPosition = mMap.getCameraPosition().target;
 				float currentZoom = mMap.getCameraPosition().zoom;
-				((MainApplication)getActivity().getApplicationContext()).mCenter = currentPosition;
-				((MainApplication)getActivity().getApplicationContext()).mCameraZoom = currentZoom;
+
+				if(mParentContext == null){
+						return;
+				}
+				((MainApplication)mParentContext.getApplicationContext()).mCenter = currentPosition;
+				((MainApplication)mParentContext.getApplicationContext()).mCameraZoom = currentZoom;
 
 				handleVisibleRectangle();
 		}
@@ -172,7 +226,7 @@ public class MapFragment extends Fragment
 						mLoadingProgress.setVisibility(View.VISIBLE);
 				}
 				//Download from localDB using CursorLoader
-				getActivity().getSupportLoaderManager().restartLoader(CursorLoaderQuery.ID_MAP, null, MapFragment.this);
+				((FragmentActivity)mParentContext).getSupportLoaderManager().restartLoader(CursorLoaderQuery.ID_MAP, null, MapFragment.this);
 		}
 
 		//==============================================================================================
@@ -185,7 +239,7 @@ public class MapFragment extends Fragment
 				Log.d(TAG, "onServiceError: ");
 				mLoadingProgress.setVisibility(View.GONE);
 				//TODO Change error handling for production. This is used while debugging only!
-				Toast.makeText(getActivity(), "error " + code + "\nError Type: " + errorType + "\nError Detail: " + errorDetail, Toast.LENGTH_LONG).show();
+				Toast.makeText(mParentContext, "error " + code + "\nError Type: " + errorType + "\nError Detail: " + errorDetail, Toast.LENGTH_LONG).show();
 		}
 
 
@@ -232,7 +286,7 @@ public class MapFragment extends Fragment
 				String selection = String.format(Locale.US, "%s AND %s AND %s", selectionLat, selectionLng, selectionRating);
 				String[] selectionArgs = new String[selectionArgsList.size()];
 				selectionArgsList.toArray(selectionArgs);
-				return new CursorLoaderQuery(getActivity(), uri, null, selection, selectionArgs, sortOrder);
+				return new CursorLoaderQuery(mParentContext, uri, null, selection, selectionArgs, sortOrder);
 		}
 
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
@@ -244,8 +298,8 @@ public class MapFragment extends Fragment
 		}
 
 		private void addVenuesMarkersOnMap(Cursor venues) {
-				//FIXME processor consuming operation. Put into a separate thread
 				Log.d(TAG, "addVenuesMarkersOnMap: ");
+				//FIXME processor consuming operation. Put into a separate thread
 				if(venues != null && venues.moveToFirst()){
 						int indexLat = venues.getColumnIndex(DBContract.VENUE_LAT);
 						int indexLng = venues.getColumnIndex(DBContract.VENUE_LNG);
@@ -253,11 +307,13 @@ public class MapFragment extends Fragment
 						BitmapDescriptor defaultIcon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
 						do{
 								final String id = venues.getString(indexId);
-								//Check if a marker is already placed on the map
+								//Don't place a marker if it is already added to the map
+								Log.d(TAG, "addVenuesMarkersOnMap: CHECKING");
 								if(mVenues.containsKey(id)){
 										continue;
 								}
 
+								Log.d(TAG, "addVenuesMarkersOnMap: ADDING");
 								double latitude = venues.getDouble(indexLat);
 								double longitude = venues.getDouble(indexLng);
 								LatLng position = new LatLng(latitude, longitude);
@@ -295,7 +351,8 @@ public class MapFragment extends Fragment
 		}
 
 		@Override public boolean onMarkerClick(Marker marker) {
-				FragmentTransaction fragmentTransaction = getActivity().getSupportFragmentManager().beginTransaction();
+				Log.d(TAG, "onMarkerClick: ");
+				FragmentTransaction fragmentTransaction = ((FragmentActivity)mParentContext).getSupportFragmentManager().beginTransaction();
 				DetailsFragment detailsFragment = new DetailsFragment();
 				detailsFragment.setVenueId(String.valueOf(marker.getTag()));
 				detailsFragment.show(fragmentTransaction, "venueDetails");
@@ -303,6 +360,7 @@ public class MapFragment extends Fragment
 		}
 
 		@Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				Log.d(TAG, "onProgressChanged: ");
 				mMinRatingFilter = (mRatingSeekbar.getMax() - progress) / 10.0;
 				String ratingFilterText = String.format(Locale.US, "%.1f", mMinRatingFilter);
 				mRatingFilterTextView.setText(ratingFilterText);
@@ -310,20 +368,24 @@ public class MapFragment extends Fragment
 		}
 
 		@Override public void onStartTrackingTouch(SeekBar seekBar) {
+				Log.d(TAG, "onStartTrackingTouch: ");
 				mRatingFilterTextView.animate().alpha(1.0f);
 		}
 
 		@Override public void onStopTrackingTouch(SeekBar seekBar) {
+				Log.d(TAG, "onStopTrackingTouch: ");
 				mRatingFilterTextView.animate().alpha(0.0f);
 				handleVisibleRectangle();
 		}
 
+		//----------------------------------------------------------------------------------------------
 		public void moveCamera(LatLngBounds bounds){
+				Log.d(TAG, "moveCamera: ");
 				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
 		}
 
-		public void
-		moveCamera(LatLng center, float zoom){
+		public void moveCamera(LatLng center, float zoom){
+				Log.d(TAG, "moveCamera: ");
 				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, zoom));
 		}
 }

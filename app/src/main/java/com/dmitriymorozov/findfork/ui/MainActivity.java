@@ -37,17 +37,19 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends AppCompatActivity implements PlaceSelectionListener, OnCompleteListener<Location>{
-		private static final String TAG = "MyLogs MainActivity";
+		public static final LatLng LOCATION_DEFAULT = new LatLng(-33.867, 151.206);
+		public static final float ZOOM_DEFAULT = 12f;
 
-		public static final int RC_LOCATION_PERMISSIONS = 1;
+		private static final String TAG = "MyLogs MainActivity";
+		private static final int RC_LOCATION_PERMISSIONS = 1;
 		private static final boolean TOGGLE_MAP = true;
 		private static final boolean TOGGLE_LIST = false;
 
-		@BindView(R.id.btn_main_toggle_mode) CheckBox mToogleMode;
+		@BindView(R.id.btn_main_toggle_mode) CheckBox mToggleMode;
 		@BindView(R.id.btn_main_device_location) ImageButton mDeviceLocationButton;
 
-		private MapFragment mMapFragment = new MapFragment();
-		private ListFragment mListFragment = new ListFragment();
+		private final MapFragment mMapFragment = new MapFragment();
+		private final ListFragment mListFragment = new ListFragment();
 		private FusedLocationProviderClient mFusedLocationClient;
 
 		//----------------------------------------------------------------------------------------------
@@ -59,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 				mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 				if (savedInstanceState == null) {
 						Log.d(TAG, "onCreate: Initial State");
-						mToogleMode.setChecked(TOGGLE_MAP);
+						mToggleMode.setChecked(TOGGLE_MAP);
 						getSupportFragmentManager().beginTransaction()
 								.add(R.id.frame_main_container, mMapFragment, "map")
 								.commit();
@@ -67,15 +69,14 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 				}
 
 				PlaceAutocompleteFragment autocompleteFragment =
-						(PlaceAutocompleteFragment) getFragmentManager().findFragmentById(
-								R.id.fragment_main_place_autocomplete);
+						(PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.fragment_main_place_autocomplete);
 				autocompleteFragment.setOnPlaceSelectedListener(this);
 		}
 
 		//==============================================================================================
 		private void deliverLocationToFragment(LatLng center, float zoom) {
 				Fragment mapFragment = getSupportFragmentManager().findFragmentByTag("map");
-				Fragment listFragment = getSupportFragmentManager().findFragmentByTag("list");
+				//Fragment listFragment = getSupportFragmentManager().findFragmentByTag("list");
 				if (mapFragment != null) {
 						((MapFragment) mapFragment).moveCamera(center, zoom);
 				}
@@ -83,13 +84,16 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 
 		private void deliverLocationToFragment(LatLngBounds bounds) {
 				Fragment mapFragment = getSupportFragmentManager().findFragmentByTag("map");
-				Fragment listFragment = getSupportFragmentManager().findFragmentByTag("list");
+				//Fragment listFragment = getSupportFragmentManager().findFragmentByTag("list");
 				if (mapFragment != null) {
 						((MapFragment) mapFragment).moveCamera(bounds);
 				}
 		}
 
 		//==============================================================================================
+		/**
+		 * device_location button onClickListener
+		 */
 		@OnClick(R.id.btn_main_device_location) void onDeviceLocationClick() {
 				int hasCoarseLocationPermissions = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
 				int hasFineLocationPermissions = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
@@ -101,26 +105,66 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 				}
 		}
 
+		/**
+		 * Map / List toggle_mode button onClickListener
+		 * @param view - ref to ToogleButton
+		 */
 		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(CompoundButton view) {
 				boolean mode = view.isChecked();
 				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 				if (mode == TOGGLE_LIST) {
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, "list");
-				} else if (mode == TOGGLE_MAP) {
+				}
+				if (mode == TOGGLE_MAP) {
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, "map");
 				}
 				fragmentTransaction.commit();
 		}
 
+		//----------------------------------------------------------------------------------------------
+		/**
+		 * Device location callback
+		 * @param task - a task for location request
+		 */
+		@Override public void onComplete(@NonNull Task<Location> task) {
+				LatLng deviceLatLng;
+				float zoom;
+				if (task.isSuccessful() && task.getResult() != null) {
+						Location location = task.getResult();
+						deviceLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+						zoom = 17f;
+				} else {
+						Toast.makeText(MainActivity.this, "Error! Couldn't detect your location", Toast.LENGTH_SHORT).show();
+						deviceLatLng = LOCATION_DEFAULT;
+						zoom = ZOOM_DEFAULT;
+				}
+				deliverLocationToFragment(deviceLatLng, zoom);
+		}
+
+		/**
+		 * PlaceAutocompleteFragment callback
+		 * @param place - the place selected in the PlaceAutocompleteFragment widget
+		 */
 		@Override public void onPlaceSelected(Place place) {
 				LatLngBounds bounds = place.getViewport();
 				deliverLocationToFragment(bounds);
 		}
 
+		/**
+		 * PlaceAutocompleteFragment callback
+		 * @param status - failed status
+		 */
 		@Override public void onError(Status status) {
 				Log.d(TAG, "An error occurred: " + status);
 		}
 
+
+		/**
+		 * ActivityCompat.requestPermissions callback
+		 * @param requestCode - permissions request code.
+		 * @param permissions - permissions array
+		 * @param grantResults - results constants array
+		 */
 		@RequiresApi(api = Build.VERSION_CODES.M) @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
 				@NonNull int[] grantResults) {
 				Log.d(TAG, "onRequestPermissionsResult: requestCode = " + requestCode);
@@ -161,20 +205,5 @@ public class MainActivity extends AppCompatActivity implements PlaceSelectionLis
 								super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 								break;
 				}
-		}
-
-		@Override public void onComplete(@NonNull Task<Location> task) {
-				LatLng deviceLatLng;
-				float zoom;
-				if (task.isSuccessful() && task.getResult() != null) {
-						Location location = task.getResult();
-						deviceLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-						zoom = 18f;
-				} else {
-						Toast.makeText(MainActivity.this, "Error! Couldn't detect your location", Toast.LENGTH_SHORT).show();
-						deviceLatLng = new LatLng(-33.867, 151.206);
-						zoom = 12f;
-				}
-				deliverLocationToFragment(deviceLatLng, zoom);
 		}
 }

@@ -2,4 +2,11 @@
 		<string name="app_name">FindFork</string>
 
 		<string name="hello_blank_fragment">Hello blank fragment</string>
+		<string name="details_name_default">No name</string>
+		<string name="details_address_default">No address</string>
+		<string name="details_phone_default">No phone number</string>
+		<string name="details_site_default">No site</string>
+		<string name="details_pricetag_default">No price tag</string>
+		<string name="details_rate_me">Rate this place</string>
+		<string name="details_submitter_hint">Type your name</string>
 </resources>

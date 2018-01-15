@@ -61,7 +61,10 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 						mVenueId = savedInstanceState.getString(VENUE_ID_KEY);
 				}
 
-				getDialog().getWindow().requestFeature(Window.FEATURE_NO_TITLE);
+				Window dialogWindow = getDialog().getWindow();
+				if (dialogWindow != null) {
+						dialogWindow.requestFeature(Window.FEATURE_NO_TITLE);
+				}
 				View rootView = inflater.inflate(R.layout.fragment_details, container, false);
 				mUnbinder = ButterKnife.bind(this, rootView);
 				mRatingSeekBar.setOnSeekBarChangeListener(DetailsFragment.this);
@@ -74,10 +77,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		@Override public void onStart() {
 				super.onStart();
-				Dialog dialog = getDialog();
-				if(dialog != null){
-						dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-				}
+				setDialogWindowSize(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		}
 
 		@Override public void onDestroyView() {
@@ -102,8 +102,6 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		@Override public void onStopTrackingTouch(SeekBar seekBar) {
 				mRatingTextView.animate().alpha(0.0f);
-
-
 		}
 
 		@Override public Loader<Cursor> onCreateLoader(int id, Bundle args) {
@@ -114,11 +112,68 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 				return new CursorLoaderQuery(getActivity(), contentUri, null, selection, selectionArgs, null);
 		}
-
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
 				if(!parseGeneral(data)){
 						parseDetails(data);
+				}
+		}
+		@Override public void onLoaderReset(Loader<Cursor> loader) {
+				Log.d(TAG, "onLoaderReset: ");
+		}
+
+		//==============================================================================================
+		@OnClick({R.id.text_details_site, R.id.image_details_site}) void onSiteClick(){
+				String url = mSiteTextView.getText().toString();
+				if(TextUtils.isEmpty(url)){
+						return;
+				}
+				Intent intent = new Intent(Intent.ACTION_VIEW);
+				intent.setData(Uri.parse(url));
+				startActivity(intent);
+		}
+
+		@OnClick({R.id.text_details_phone, R.id.image_details_phone}) void onPhoneClick(){
+				Object phone = mPhoneTextView.getText();
+				if(TextUtils.isEmpty(phone.toString())){
+						return;
+				}
+				Uri phoneUri = Uri.parse("tel:" + phone);
+				Intent intent = new Intent(Intent.ACTION_DIAL, phoneUri);
+				startActivity(intent);
+		}
+
+		@OnClick(R.id.button_details_submit) void onUpdateRatingClick(){
+				if(TextUtils.isEmpty(mRatingSubmitterEditText.getText())){
+						Toast.makeText(getActivity(), "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
+				} else{
+						String ratingString = mRatingTextView.getText().toString();
+						double rating;
+						if(TextUtils.isEmpty(ratingString)){
+								rating = 0;
+						}else{
+								rating = Double.parseDouble(ratingString);
+						}
+						String submitter = mRatingSubmitterEditText.getText().toString();
+						ContentValues contentValues = new ContentValues();
+						contentValues.put(DBContract.VENUE_RATING, rating);
+						contentValues.put(DBContract.VENUE_RATING_SUBMITTER, submitter);
+						String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
+						String[] selectionArgs = new String[]{mVenueId};
+
+						getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
+						DetailsFragment.this.dismiss();
+				}
+		}
+
+		//==============================================================================================
+		private void setDialogWindowSize(int width, int height) {
+				Dialog dialog = getDialog();
+				if(dialog != null){
+						Window dialogWindow = dialog.getWindow();
+						if(dialogWindow != null){
+								dialogWindow.setLayout(width, height);
+						}
 				}
 		}
 
@@ -198,53 +253,6 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 										mPriceDescriptionTextView.setTextColor(getResources().getColor(android.R.color.black));
 										break;
 						}
-				}
-		}
-
-		@Override public void onLoaderReset(Loader<Cursor> loader) {
-				Log.d(TAG, "onLoaderReset: ");
-		}
-		//----------------------------------------------------------------------------------------------
-		@OnClick({R.id.text_details_site, R.id.image_details_site}) void onSiteClick(){
-				String url = mSiteTextView.getText().toString();
-				if(TextUtils.isEmpty(url)){
-						return;
-				}
-				Intent intent = new Intent(Intent.ACTION_VIEW);
-				intent.setData(Uri.parse(url));
-				startActivity(intent);
-		}
-
-		@OnClick({R.id.text_details_phone, R.id.image_details_phone}) void onPhoneClick(){
-				Object phone = mPhoneTextView.getText();
-				if(TextUtils.isEmpty(phone.toString())){
-						return;
-				}
-				Uri phoneUri = Uri.parse("tel:" + phone);
-				Intent intent = new Intent(Intent.ACTION_DIAL, phoneUri);
-				startActivity(intent);
-		}
-
-		@OnClick(R.id.button_details_submit) void onUpdateRatingClick(){
-				if(TextUtils.isEmpty(mRatingSubmitterEditText.getText())){
-						Toast.makeText(getActivity(), "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
-				} else{
-						String ratingString = mRatingTextView.getText().toString();
-						double rating;
-						if(TextUtils.isEmpty(ratingString)){
-								rating = 0;
-						}else{
-								rating = Double.parseDouble(ratingString);
-						}
-						String submitter = mRatingSubmitterEditText.getText().toString();
-						ContentValues contentValues = new ContentValues();
-						contentValues.put(DBContract.VENUE_RATING, rating);
-						contentValues.put(DBContract.VENUE_RATING_SUBMITTER, submitter);
-						String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
-						String[] selectionArgs = new String[]{mVenueId};
-
-						getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
-						DetailsFragment.this.dismiss();
 				}
 		}
 }

@@ -25,11 +25,12 @@ import retrofit2.Response;
 
 import static com.dmitriymorozov.findfork.database.MyContentProvider.*;
 
-public class FoursquareService extends Service {
+public class FoursquareService extends Service implements Callback<FoursquareJSON>{
 		private static final String TAG = "MyLogs Service";
 		private static final String CLIENT_ID = "Z5QQULAXLH33K4G21YD1JSXZ3K4IGZLLVS1QMCEGRV3CGK4K";
 		private static final String CLIENT_SECRET = "OYHK43EOG4EGFNFUERWV2BOTW0LY3BGBTDXTYPLMXHTFACFE";
 		private static final int SERVICE_ERROR_CODE = 0;
+		private static final int EXPAND_REGION_DEFAULT = 121;
 
 		private ApiFoursquare mRetrofit;
 		private WeakReference<OnServiceListener> mCallbackRef;
@@ -42,6 +43,21 @@ public class FoursquareService extends Service {
 				return new LocalBinder();
 		}
 
+
+		@Override public void onResponse(@NonNull Call<FoursquareJSON> call,
+				@NonNull Response<FoursquareJSON> response) {
+				handleRetrofitResponse(response);
+		}
+
+		@Override public void onFailure(@NonNull Call<FoursquareJSON> call, @NonNull
+				Throwable t) {
+				Log.d(TAG, "Retrofit onFailure: " + t.getMessage());
+				String errorType = "Retrofit onFailure";
+				String errorDetail = t.getMessage();
+				if(mCallbackRef != null && mCallbackRef.get() != null){
+						mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
+				}
+		}
 		//==============================================================================================
 		private ContentValues[] createVenueContentValuesArray(@NonNull List<ItemsItem> venueList){
 				int venueListSize = venueList.size();
@@ -153,11 +169,7 @@ public class FoursquareService extends Service {
 								mCallbackRef.get().onNetworkError(responseCode, "errorType", "errorDetail");
 						}
 				}
-
-				//Release the objects
-				response = null;
 		}
-
 
 
 		/**
@@ -178,6 +190,7 @@ public class FoursquareService extends Service {
 				double heightDelta = (expandedHeight - height) / 2;
 				return new LatLngBounds(new LatLng(south - heightDelta, west - widthDelta), new LatLng(north + heightDelta, east + widthDelta));
 		}
+
 		//==============================================================================================
 		public class LocalBinder extends Binder {
 				public void setOnDataDownloadListener(OnServiceListener onDataDownloadListener){
@@ -188,37 +201,22 @@ public class FoursquareService extends Service {
 				 * Api --> local DB layer
 				 */
 				public void downloadVenuesByRectangleFromApi(LatLng southWest, LatLng northEast){
-						LatLngBounds newBounds = expandRegionBy(southWest, northEast, 121);
+						LatLngBounds newBounds = expandRegionBy(southWest, northEast, EXPAND_REGION_DEFAULT);
 						Log.d(TAG, "downloadVenuesByRectangleFromApi: ");
 						String sw = String.format(Locale.US, "%s,%s", newBounds.southwest.latitude, newBounds.southwest.longitude);
 						String ne = String.format(Locale.US, "%s,%s", newBounds.northeast.latitude, newBounds.northeast.longitude);
 
 						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 50);
-						call.enqueue(new Callback<FoursquareJSON>() {
-								@Override public void onResponse(@NonNull Call<FoursquareJSON> call,
-										@NonNull Response<FoursquareJSON> response) {
-										handleRetrofitResponse(response);
-								}
-
-								@Override public void onFailure(@NonNull Call<FoursquareJSON> call, @NonNull
-										Throwable t) {
-										Log.d(TAG, "Retrofit onFailure: " + t.getMessage());
-										String errorType = "Retrofit onFailure";
-										String errorDetail = t.getMessage();
-										if(mCallbackRef != null && mCallbackRef.get() != null){
-												mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
-										}
-								}
-						});
+						call.enqueue(FoursquareService.this);
 				}
 
 				/**
-				 * Removes from localDB all rows that are outside of provided rectangle multipled by coef
+				 * Removes from localDB all rows that are outside of provided rectangle multiplied by coefficient
 				 */
 				//
 				public void cleanLocalDb(LatLng southWest, LatLng northEast) {
 						//TODO POSSIBLE CPU consuming operation put into AsyncTask (or thread)
-						LatLngBounds newBounds = expandRegionBy(southWest, northEast, 121);
+						LatLngBounds newBounds = expandRegionBy(southWest, northEast, EXPAND_REGION_DEFAULT);
 						double south = newBounds.southwest.latitude;
 						double north = newBounds.northeast.latitude;
 						double west = newBounds.southwest.longitude;

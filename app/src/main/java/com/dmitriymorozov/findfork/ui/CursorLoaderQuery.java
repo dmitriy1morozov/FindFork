@@ -13,10 +13,10 @@ class CursorLoaderQuery extends CursorLoader {
 		static final int ID_VENUE_GENERAL = 2;
 		static final int ID_VENUE_DETAILS = 3;
 
-		private Uri mUri;
-		private String mSelection = null;
-		private String[] mSelectionArgs = null;
-		private String mSortOrder = null;
+		private final Uri mUri;
+		private final String mSelection;
+		private final String[] mSelectionArgs;
+		private final String mSortOrder;
 
 		public CursorLoaderQuery(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {

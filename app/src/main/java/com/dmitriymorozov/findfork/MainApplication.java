@@ -7,8 +7,6 @@ import com.google.android.gms.maps.model.LatLng;
 public class MainApplication extends Application {
 		public LatLng mCenter;
 		public float mCameraZoom;
-		public LatLng mSouthWest;
-		public LatLng mNorthEast;
 
 		@Override public void onCreate() {
 				super.onCreate();
