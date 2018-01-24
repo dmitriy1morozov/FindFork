@@ -1,6 +1,6 @@
 Android Level-up courses final work
 
-Description of application: 
+Description of application:<br>
 A map of restaurants around the location.
 
 Technical requirements:
@@ -15,20 +15,16 @@ Technical requirements:
 
 
 The application must support caching and offline operations based on stored data.
-
 The application must support the screen rotation.
 
 
 Additional materials.
 
-As a restaurant base, you can use the Foursquare API:
-
+As a restaurant base, you can use the Foursquare API:<br>
 https://developer.foursquare.com/docs/venues/search
 https://developer.foursquare.com/overview/venues
 https://developer.foursquare.com/docs/venues/categories
 
-Also, the following links can be useful:
-
+Also, the following links can be useful:<br>
 http://stackoverflow.com/questions/9064385/ploting-foursquare-venues-on-google-map
-
 http://stackoverflow.com/questions/3478840/google-maps-api-drop-a-new-pin
