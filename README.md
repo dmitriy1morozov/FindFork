@@ -1,6 +1,7 @@
-# FindFork final work for Android Level-up courses
+Android Level-up courses final work
 
-Description of application: A map of restaurants around the location.
+Description of application: 
+A map of restaurants around the location.
 
 Technical requirements:
 1. The user should be able to enter the address or zip code of their location.
@@ -12,17 +13,22 @@ Technical requirements:
 7. When scrolling the list, the search area should expand. Also, the user should be able to edit the search area using zoomIn / zoomOut in map mode.
 8. In the map mode, the restaurant with the highest rating should be marked with a different color marker. If there are several top-ranked restaurants, then they all should have such a marker.
 
+
 The application must support caching and offline operations based on stored data.
+
 The application must support the screen rotation.
 
 
 Additional materials.
 
 As a restaurant base, you can use the Foursquare API:
+
 https://developer.foursquare.com/docs/venues/search
 https://developer.foursquare.com/overview/venues
 https://developer.foursquare.com/docs/venues/categories
 
 Also, the following links can be useful:
+
 http://stackoverflow.com/questions/9064385/ploting-foursquare-venues-on-google-map
+
 http://stackoverflow.com/questions/3478840/google-maps-api-drop-a-new-pin
