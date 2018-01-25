@@ -206,7 +206,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 						String sw = String.format(Locale.US, "%s,%s", newBounds.southwest.latitude, newBounds.southwest.longitude);
 						String ne = String.format(Locale.US, "%s,%s", newBounds.northeast.latitude, newBounds.northeast.longitude);
 
-						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 50);
+						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 200);
 						call.enqueue(FoursquareService.this);
 				}
 
@@ -214,7 +214,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 				 * Removes from localDB all rows that are outside of provided rectangle multiplied by coefficient
 				 */
 				//
-				public void cleanLocalDb(LatLng southWest, LatLng northEast) {
+				public void removeOutsideVenuesFromLocalDb(LatLng southWest, LatLng northEast) {
 						//TODO POSSIBLE CPU consuming operation put into AsyncTask (or thread)
 						LatLngBounds newBounds = expandRegionBy(southWest, northEast, EXPAND_REGION_DEFAULT);
 						double south = newBounds.southwest.latitude;

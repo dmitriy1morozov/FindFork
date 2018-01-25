@@ -6,10 +6,10 @@ import android.net.Uri;
 import android.support.v4.content.CursorLoader;
 import android.util.Log;
 
-class CursorLoaderQuery extends CursorLoader {
+class QueryDbCursorLoader extends CursorLoader {
 		private static final String TAG = "MyLogs Query";
 
-		static final int ID_MAP = 1;
+		static final int ID_MAIN = 1;
 		static final int ID_VENUE_GENERAL = 2;
 		static final int ID_VENUE_DETAILS = 3;
 
@@ -18,13 +18,14 @@ class CursorLoaderQuery extends CursorLoader {
 		private final String[] mSelectionArgs;
 		private final String mSortOrder;
 
-		public CursorLoaderQuery(Context context, Uri uri, String[] projection, String selection,
+		public QueryDbCursorLoader(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {
 				super(context, uri, projection, selection, selectionArgs, sortOrder);
 				mUri = uri;
 				mSelection = selection;
 				mSelectionArgs = selectionArgs;
 				mSortOrder = sortOrder;
+				this.setUpdateThrottle(1000);
 		}
 
 		@Override

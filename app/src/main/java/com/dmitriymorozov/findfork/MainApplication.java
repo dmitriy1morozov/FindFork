@@ -3,10 +3,12 @@ package com.dmitriymorozov.findfork;
 import android.app.Application;
 import com.facebook.stetho.Stetho;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 
 public class MainApplication extends Application {
-		public LatLng mCenter;
-		public float mCameraZoom;
+		public LatLngBounds mVisibleArea;
+		//public LatLng mCenter;
+		//public float mCameraZoom;
 
 		@Override public void onCreate() {
 				super.onCreate();
