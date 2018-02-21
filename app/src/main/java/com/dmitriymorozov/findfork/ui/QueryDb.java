@@ -6,8 +6,8 @@ import android.net.Uri;
 import android.support.v4.content.CursorLoader;
 import android.util.Log;
 
-class QueryDbCursorLoader extends CursorLoader {
-		private static final String TAG = "MyLogs Query";
+class QueryDb extends CursorLoader {
+		private static final String TAG = "MyLogs QueryDb";
 
 		static final int ID_MAIN = 1;
 		static final int ID_VENUE_GENERAL = 2;
@@ -18,7 +18,7 @@ class QueryDbCursorLoader extends CursorLoader {
 		private final String[] mSelectionArgs;
 		private final String mSortOrder;
 
-		QueryDbCursorLoader(Context context, Uri uri, String[] projection, String selection,
+		QueryDb(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {
 				super(context, uri, projection, selection, selectionArgs, sortOrder);
 				mUri = uri;

@@ -39,7 +39,6 @@ import butterknife.OnClick;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
-import com.dmitriymorozov.findfork.model.Venue;
 import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.dmitriymorozov.findfork.service.OnServiceListener;
 import com.google.android.gms.common.api.Status;
@@ -54,11 +53,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import static com.dmitriymorozov.findfork.ui.Constants.DEFAULT_VISIBLE_BOUNDS;
 import static com.dmitriymorozov.findfork.ui.Constants.LOCATION_DEFAULT;
@@ -66,7 +62,8 @@ import static com.dmitriymorozov.findfork.ui.Constants.LOCATION_DEFAULT;
 public class MainActivity extends AppCompatActivity
 		implements PlaceSelectionListener, OnCompleteListener<Location>, OnServiceListener,
 		LoaderManager.LoaderCallbacks<Cursor>, MapFragment.OnMapFragmentListener,
-		ListFragment.OnLoadMoreListener {
+		OnLoadMoreListener {
+
 		private static final String TAG = "MyLogs MainActivity";
 		private static final int RC_LOCATION_PERMISSIONS = 1;
 		private static final boolean TOGGLE_MAP = true;
@@ -133,7 +130,7 @@ public class MainActivity extends AppCompatActivity
 						@Override public void onChange(boolean selfChange) {
 								super.onChange(selfChange);
 								Log.d(TAG, "ContentObserver onChange: ");
-								Loader loader = getSupportLoaderManager().getLoader(QueryDbCursorLoader.ID_MAIN);
+								Loader loader = getSupportLoaderManager().getLoader(QueryDb.ID_MAIN);
 								if (loader != null) {
 										loader.forceLoad();
 								}
@@ -165,6 +162,7 @@ public class MainActivity extends AppCompatActivity
 				}
 				if (mListFragment != null && mListFragment.isVisible()) {
 						mListFragment.setVisibleBounds(visibleBounds);
+						downloadMoreVenues(visibleBounds);
 				}
 		}
 
@@ -175,9 +173,10 @@ public class MainActivity extends AppCompatActivity
 				if (mMapFragment != null && mMapFragment.isVisible()) {
 						mMapFragment.venuesDataReceived(data);
 				}
-				if (mListFragment != null && mListFragment.isVisible()) {
-						mListFragment.venuesDataReceived(data);
-				}
+				//if (mListFragment != null && mListFragment.isVisible()) {
+				//		//TODO use ListFragment modularty
+				//		mListFragment.venuesDataDownloaded();
+				//}
 		}
 
 		private boolean hasGpsDevice(Context context) {
@@ -205,23 +204,22 @@ public class MainActivity extends AppCompatActivity
 				Bundle args = new Bundle();
 				args.putParcelable("bounds", bounds);
 				args.putDouble("minRatingFilter", minRatingFilter);
-				getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_MAIN, args, this);
+				getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
 		}
 
-		@Override public void loadMoreVenues(LatLngBounds bounds) {
+		@Override public void downloadMoreVenues(LatLngBounds bounds) {
 				if (mBinder != null) {
 						mBinder.removeOutsideVenuesFromLocalDb(bounds);
 						mBinder.downloadVenuesByRectangleFromApi(bounds);
 						mLoadingProgress.setVisibility(View.VISIBLE);
 				}
 				//Download from localDB using CursorLoader
-				Bundle args = new Bundle();
-				args.putParcelable("bounds", bounds);
-				args.putDouble("minRatingFilter", 0);
-				getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_MAIN, args, this);
+				//Bundle args = new Bundle();
+				//args.putParcelable("bounds", bounds);
+				//args.putDouble("minRatingFilter", 0);
+				//getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
 		}
 		//==============================================================================================
-
 		/**
 		 * device_location button onClickListener
 		 */
@@ -256,7 +254,6 @@ public class MainActivity extends AppCompatActivity
 
 		/**
 		 * Map / List toggle_mode button onClickListener
-		 *
 		 * @param view - ref to ToogleButton
 		 */
 		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(CompoundButton view) {
@@ -264,7 +261,6 @@ public class MainActivity extends AppCompatActivity
 				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 
 				if (mode == TOGGLE_LIST) {
-
 						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
 						if (mMapFragment != null) {
 								visibleBounds = mMapFragment.getVisibleBounds();
@@ -273,7 +269,7 @@ public class MainActivity extends AppCompatActivity
 						if (mListFragment == null) {
 								mListFragment = new ListFragment();
 						}
-						//mListFragment.setVisibleBounds(visibleBounds);
+						mListFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, "list");
 				}
 				if (mode == TOGGLE_MAP) {
@@ -340,6 +336,10 @@ public class MainActivity extends AppCompatActivity
 		@Override public void onNetworkJobsFinished() {
 				Log.d(TAG, "onServiceWorkFinished: ");
 				mLoadingProgress.setVisibility(View.GONE);
+
+				if (mListFragment != null && mListFragment.isVisible()) {
+						//mListFragment.venuesDataDownloaded();
+				}
 		}
 
 		/**
@@ -408,7 +408,7 @@ public class MainActivity extends AppCompatActivity
 						selectionRating);
 				String[] selectionArgs = new String[selectionArgsList.size()];
 				selectionArgsList.toArray(selectionArgs);
-				return new QueryDbCursorLoader(this, uri, null, selection, selectionArgs, sortOrder);
+				return new QueryDb(this, uri, null, selection, selectionArgs, sortOrder);
 		}
 
 		/**

@@ -72,7 +72,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 				Bundle generalBundle = new Bundle();
 				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
-				getActivity().getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_VENUE_GENERAL, generalBundle, DetailsFragment.this);
+				getActivity().getSupportLoaderManager().restartLoader(QueryDb.ID_VENUE_GENERAL, generalBundle, DetailsFragment.this);
 				return rootView;
 		}
 
@@ -111,7 +111,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 				String[] selectionArgs = { mVenueId };
 
-				return new QueryDbCursorLoader(getActivity(), contentUri, null, selection, selectionArgs, null);
+				return new QueryDb(getActivity(), contentUri, null, selection, selectionArgs, null);
 		}
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
@@ -206,7 +206,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 						Bundle detailsBundle = new Bundle();
 						detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
-						getActivity().getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_VENUE_DETAILS, detailsBundle, DetailsFragment.this);
+						getActivity().getSupportLoaderManager().restartLoader(QueryDb.ID_VENUE_DETAILS, detailsBundle, DetailsFragment.this);
 						return true;
 				}
 				return false;

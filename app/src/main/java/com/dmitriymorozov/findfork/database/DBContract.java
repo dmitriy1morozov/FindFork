@@ -33,7 +33,7 @@ public class DBContract implements BaseColumns {
 				TABLE_VENUES,
 				_ID,
 				VENUE_ID, VENUE_NAME, VENUE_LAT, VENUE_LNG, VENUE_RATING, VENUE_RATING_SUBMITTER,
-				_ID
+				VENUE_ID
 				);
 
 		static final String CREATE_TABLE_DETAILS = String.format(Locale.US,
@@ -48,6 +48,6 @@ public class DBContract implements BaseColumns {
 				VENUE_ID, DETAILS_ADDRESS_FORMATTED, DETAILS_PHONE, DETAILS_PHONE_FORMATTED, DETAILS_SITE_URL,
 				DETAILS_PRICE_TIER, DETAILS_PRICE_CURRENCY, DETAILS_PRICE_MESSAGE,
 				_ID, TABLE_VENUES, _ID,
-				_ID
+				VENUE_ID
 		);
 }
