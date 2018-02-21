@@ -34,9 +34,17 @@ import java.util.Locale;
 
 public class MapFragment extends Fragment
 		implements OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener,
-		SeekBar.OnSeekBarChangeListener{
+		SeekBar.OnSeekBarChangeListener, GoogleMap.OnMapLoadedCallback {
 
+		public interface OnMapFragmentListener {
+				void onMapChanged(LatLngBounds bounds, double minRatingFilter);
+		}
+
+		//----------------------------------------------------------------------------------------------
 		private static final String TAG = "MyLogs MapFragment";
+		private static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
+
+		private Context mParentContext;
 
 		private MapView mMapView;
 		private GoogleMap mMap;
@@ -44,7 +52,7 @@ public class MapFragment extends Fragment
 		private TextView mRatingFilterTextView;
 		private double mMinRatingFilter;
 
-		private Context mParentContext;
+		private LatLngBounds mVisibleBounds;
 		private OnMapFragmentListener mCallback;
 		private HashMap<String, Marker> mVenues;
 
@@ -55,7 +63,7 @@ public class MapFragment extends Fragment
 				try {
 						mCallback = (OnMapFragmentListener) mParentContext;
 				} catch (ClassCastException  cce) {
-						Log.d(TAG, "onAttach: Error: " + cce.getMessage());
+						Log.d(TAG, "onAttach: ErrorResponse: " + cce.getMessage());
 				}
 		}
 
@@ -72,6 +80,10 @@ public class MapFragment extends Fragment
 						mVenues.clear();
 				} else{
 						mVenues = new HashMap<>();
+				}
+
+				if(savedInstanceState != null){
+						mVisibleBounds = savedInstanceState.getParcelable(BUNDLE_VISIBLE_BOUNDS);
 				}
 				return rootView;
 		}
@@ -108,8 +120,9 @@ public class MapFragment extends Fragment
 
 		@Override public void onSaveInstanceState(Bundle outState) {
 				Log.d(TAG, "onSaveInstanceState: ");
-				super.onSaveInstanceState(outState);
 				mMapView.onSaveInstanceState(outState);
+				outState.putParcelable(BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
+				super.onSaveInstanceState(outState);
 		}
 
 		@Override public void onStop() {
@@ -133,10 +146,10 @@ public class MapFragment extends Fragment
 
 		//==============================================================================================
 		private void handleVisibleRectangle(){
+				Log.d(TAG, "handleVisibleRectangle: ");
 				VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
-				LatLngBounds bounds = visibleRegion.latLngBounds;
-				((MainApplication) mParentContext.getApplicationContext()).mVisibleArea = bounds;
-				mCallback.onMapChanged(bounds, mMinRatingFilter);
+				mVisibleBounds = visibleRegion.latLngBounds;
+				mCallback.onMapChanged(mVisibleBounds, mMinRatingFilter);
 		}
 
 		private void addVenuesMarkersOnMap(Cursor venues) {
@@ -191,13 +204,14 @@ public class MapFragment extends Fragment
 		@Override public void onMapReady(final GoogleMap googleMap) {
 				Log.d(TAG, "onMapReady: ");
 				mMap = googleMap;
-				mMap.setOnCameraIdleListener(this);
+				mMap.setOnMapLoadedCallback(this);
+
 
 				//LatLngBounds visibleBounds = ((MainApplication) mParentContext.getApplicationContext()).mVisibleArea;
 				//if(visibleBounds != null){
 				//		Log.d(TAG, "onMapReady: visibleBounds = " + visibleBounds.southwest + ";" + visibleBounds.northeast);
 				//		//FIXME use-case. Click back button and exit app. Once app is restarted the following error appears:
-				//		//FIXME Error using newLatLngBounds(LatLngBounds, int): Map size can't be 0.
+				//		//FIXME ErrorResponse using newLatLngBounds(LatLngBounds, int): Map size can't be 0.
 				//		//FIXME Most likely, layout has not yet occured for the map view.
 				//		//FIXME Either wait until layout has occurred or use newLatLngBounds(LatLngBounds, int, int, int) which allows you to specify the map's dimensions.
 				//		mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(visibleBounds, mMapView.getWidth(),mMapView.getHeight(),0));
@@ -207,11 +221,21 @@ public class MapFragment extends Fragment
 				//}
 		}
 
+		@Override public void onMapLoaded() {
+				Log.d(TAG, "onMapLoaded: ");
+				mMap.setOnCameraIdleListener(MapFragment.this);
+				if(mVisibleBounds != null){
+						moveCamera(mVisibleBounds);
+				}else{
+						Log.d(TAG, "onMapLoaded: Load Default bounds");
+						moveCamera(Constants.DEFAULT_VISIBLE_BOUNDS);
+				}
+		}
+
 		@Override public void onCameraIdle() {
 				Log.d(TAG, "onCameraIdle: ");
 				handleVisibleRectangle();
 		}
-
 
 		@Override public boolean onMarkerClick(Marker marker) {
 				Log.d(TAG, "onMarkerClick: ");
@@ -242,9 +266,21 @@ public class MapFragment extends Fragment
 		}
 
 		//----------------------------------------------------------------------------------------------
-		public void moveCamera(){
+		public void setVisibleBounds(LatLngBounds visibleBounds){
+				Log.d(TAG, "setVisibleBounds: ");
+				if(visibleBounds != null){
+						mVisibleBounds = visibleBounds;
+				} else{
+						mVisibleBounds = Constants.DEFAULT_VISIBLE_BOUNDS;
+				}
+		}
+
+		public LatLngBounds getVisibleBounds(){
+				return mVisibleBounds;
+		}
+
+		public void moveCamera(LatLngBounds visibleBounds){
 				Log.d(TAG, "moveCamera: ");
-				LatLngBounds visibleBounds = ((MainApplication) mParentContext.getApplicationContext()).mVisibleArea;
 				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(visibleBounds, 0));
 		}
 
@@ -253,10 +289,5 @@ public class MapFragment extends Fragment
 				mVenues.clear();
 				addVenuesMarkersOnMap(data);
 				highlightTopRankedVenues(data);
-		}
-
-		//----------------------------------------------------------------------------------------------
-		public interface OnMapFragmentListener {
-				void onMapChanged(LatLngBounds bounds, double minRatingFilter);
 		}
 }

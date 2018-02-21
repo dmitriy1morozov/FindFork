@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
@@ -148,20 +149,25 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 						Toast.makeText(getActivity(), "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
 				} else{
 						String ratingString = mRatingTextView.getText().toString();
-						double rating;
+						final double rating;
 						if(TextUtils.isEmpty(ratingString)){
 								rating = 0;
 						}else{
 								rating = Double.parseDouble(ratingString);
 						}
-						String submitter = mRatingSubmitterEditText.getText().toString();
-						ContentValues contentValues = new ContentValues();
-						contentValues.put(DBContract.VENUE_RATING, rating);
-						contentValues.put(DBContract.VENUE_RATING_SUBMITTER, submitter);
-						String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
-						String[] selectionArgs = new String[]{mVenueId};
+						final String submitter = mRatingSubmitterEditText.getText().toString();
 
-						getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
+						AsyncTask.execute(new Runnable() {
+								@Override public void run() {
+										ContentValues contentValues = new ContentValues();
+										contentValues.put(DBContract.VENUE_RATING, rating);
+										contentValues.put(DBContract.VENUE_RATING_SUBMITTER, submitter);
+										String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
+										String[] selectionArgs = new String[]{mVenueId};
+
+										getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
+								}
+						});
 						DetailsFragment.this.dismiss();
 				}
 		}

@@ -28,7 +28,7 @@ allprojects {
         myCompileSdkVersion = 26
         myBuildToolsVersion = "26.0.2"
         myMinSdkVersion = 21
-        myTargetSdkVersion = 23
+        myTargetSdkVersion = 26
     }
 
     ext.versions = [
@@ -42,7 +42,10 @@ allprojects {
             rxAndroid: "2.0.1",
             googlePlayServices: "11.0.1",
             retrofit: "2.3.0",
-            annotation: "10.0-b28"
+            annotation: "10.0-b28",
+            mapsUtils: "0.5+",
+            stetho: "1.5.0",
+            glide: "4.6.1"
     ]
 
     ext.tests = [
@@ -60,7 +63,8 @@ allprojects {
 
     ext.googleplay = [
             services: "com.google.android.gms:play-services:$versions.googlePlayServices",
-            location: "com.google.android.gms:play-services-location:$versions.googlePlayServices"
+            location: "com.google.android.gms:play-services-location:$versions.googlePlayServices",
+            mapsUtils: "com.google.maps.android:android-maps-utils:$versions.mapsUtils"
     ]
 
     ext.jakewharton = [
@@ -76,6 +80,16 @@ allprojects {
     ext.annotation = [
             annotation: "org.glassfish:javax.annotation:$versions.annotation"
     ]
+
+    ext.facebook = [
+            stetho: "com.facebook.stetho:stetho:$versions.stetho"
+    ]
+
+    ext.bumpertech = [
+            glide: "com.github.bumptech.glide:glide:$versions.glide",
+            annotationProcessor: "com.github.bumptech.glide:compiler:$versions.glide"
+    ]
+
 }
 
 task clean(type: Delete) {

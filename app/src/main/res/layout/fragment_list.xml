@@ -1,15 +1,10 @@
-<android.support.constraint.ConstraintLayout
+<ListView
 		xmlns:android="http://schemas.android.com/apk/res/android"
 		xmlns:tools="http://schemas.android.com/tools"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
+		android:id="@+id/listview_list_venues"
 		tools:context="com.dmitriymorozov.findfork.ui.ListFragment"
 		>
 
-		<ListView
-				android:id="@+id/listview_list_venues"
-				android:layout_width="match_parent"
-				android:layout_height="match_parent"
-				/>
-
-</android.support.constraint.ConstraintLayout>
+</ListView>

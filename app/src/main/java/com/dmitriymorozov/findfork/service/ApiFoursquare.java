@@ -1,6 +1,6 @@
 package com.dmitriymorozov.findfork.service;
 
-import com.dmitriymorozov.findfork.explorePOJO.FoursquareJSON;
+import com.dmitriymorozov.findfork.model.explorePOJO.FoursquareJSON;
 import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -13,17 +13,6 @@ interface ApiFoursquare {
 		long VERSION = 20180102;
 
 		@GET("explore?v=" + VERSION)
-		Call<FoursquareJSON> getNearbyPlacesByPoint(
-				@Query("client_id") String clientId,
-				@Query("client_secret") String clientSecret,
-				@Query("ll") String latLng,
-				@Query("radius") long radius,
-				@Query("intent") String intent,
-				@Query("query") String query,
-				@Query("limit") int limit
-				);
-
-		@GET("explore?v=" + VERSION)
 		Call<FoursquareJSON> getNearbyPlacesByRectangle(
 				@Query("client_id") String clientId,
 				@Query("client_secret") String clientSecret,
@@ -34,7 +23,7 @@ interface ApiFoursquare {
 				@Query("limit") int limit
 		);
 
-		Retrofit retrofit = new Retrofit
+		Retrofit mRetrofit = new Retrofit
 				.Builder()
 				.baseUrl(BASE_URL)
 				.addConverterFactory(GsonConverterFactory.create())

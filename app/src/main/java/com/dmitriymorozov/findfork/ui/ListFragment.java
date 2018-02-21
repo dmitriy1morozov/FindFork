@@ -2,9 +2,9 @@ package com.dmitriymorozov.findfork.ui;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.os.Bundle;
-import android.support.constraint.ConstraintLayout;
-import android.support.v4.app.Fragment;
+import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
@@ -12,15 +12,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
-import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
-import android.widget.Toast;
-import com.dmitriymorozov.findfork.MainApplication;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
-import com.dmitriymorozov.findfork.util.Venue;
+import com.dmitriymorozov.findfork.model.Venue;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.android.SphericalUtil;
@@ -29,70 +26,75 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ListFragment extends Fragment implements AdapterView.OnItemClickListener,
-		AbsListView.OnScrollListener {
+public class ListFragment extends android.support.v4.app.ListFragment implements AbsListView.OnScrollListener {
+
+		public interface OnLoadMoreListener {
+				void loadMoreVenues(LatLngBounds bounds);
+		}
+
+		//==============================================================================================
 		private static final String TAG = "MyLogs ListFragment";
 
+		private static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
 		private static final String ATTRIBUTE_ID = "venueId";
 		private static final String ATTRIBUTE_NAME = "venueName";
 		private static final String ATTRIBUTE_DISTANCE = "venueDistance";
 
-		private LatLng mCurrentPosition;
+		private Context mParentContext;
+		private OnLoadMoreListener mCallback;
 
+		private LatLngBounds mVisibleBounds;
 		private boolean isLoading = false;
+
 		private View mFooterLoadingView;
-		private ListView mVenuesListView;
 		private ArrayList<Venue> mVenues = new ArrayList<>();
-		private ArrayList<Map<String, Object>> mAdapterData;
+		private ArrayList<Map<String, Object>> mAdapterData = new ArrayList<>();
 		private SimpleAdapter mSimpleAdapter;
 
-		private OnLoadMoreListener mCallback;
-		private Context mParentContext;
+		@Override public void onCreate(@Nullable Bundle savedInstanceState) {
+				super.onCreate(savedInstanceState);
+				String[] from = { ATTRIBUTE_ID, ATTRIBUTE_NAME, ATTRIBUTE_DISTANCE };
+				int[] to = { R.id.text_item_id, R.id.text_item_name, R.id.text_item_distance };
+				mSimpleAdapter = new SimpleAdapter(mParentContext, mAdapterData, R.layout.item_list, from, to);
+				setListAdapter(mSimpleAdapter);
+		}
 
 		@Override public void onAttach(Context context) {
 				Log.d(TAG, "onAttach: ");
 				super.onAttach(context);
 				mParentContext = context;
-				try {
-						mCallback = (ListFragment.OnLoadMoreListener) context;
-				} catch (ClassCastException  cce) {
-						Log.d(TAG, "onAttach: Error: " + cce.getMessage());
+				if (context instanceof OnLoadMoreListener) {
+						mCallback = (OnLoadMoreListener) context;
+				} else {
+						Log.d(TAG, "onAttach() failed: " + "parent context is not an instance of OnLoadMoreListener interface");
 				}
 		}
 
-		@Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-				Log.d(TAG, "onCreateView: ");
-				ConstraintLayout rootView = (ConstraintLayout)inflater.inflate(R.layout.fragment_list, container, false);
-				mVenuesListView = rootView.findViewById(R.id.listview_list_venues);
-				mVenuesListView.setOnItemClickListener(this);
-
+		@Override public View onCreateView(LayoutInflater inflater, ViewGroup container,
+				Bundle savedInstanceState) {
 				mFooterLoadingView = inflater.inflate(R.layout.item_loading, null);
-				mVenuesListView.setOnScrollListener(this);
-				return rootView;
+				return super.onCreateView(inflater, container, savedInstanceState);
 		}
 
-		@Override public void onStart() {
-				Log.d(TAG, "onStart: ");
-				super.onStart();
-
-				mAdapterData = new ArrayList<>();
-				for (Venue venue : mVenues) {
-						Map<String, Object> dataMap = new HashMap<>();
-						dataMap.put(ATTRIBUTE_ID, venue.getId());
-						dataMap.put(ATTRIBUTE_NAME, venue.getName());
-						dataMap.put(ATTRIBUTE_DISTANCE, venue.getDistance());
-						mAdapterData.add(dataMap);
+		@Override public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+				super.onActivityCreated(savedInstanceState);
+				if(savedInstanceState != null){
+						mVisibleBounds = savedInstanceState.getParcelable(BUNDLE_VISIBLE_BOUNDS);
+				} else{
+						mVisibleBounds = Constants.DEFAULT_VISIBLE_BOUNDS;
 				}
-				String[] from = { ATTRIBUTE_ID, ATTRIBUTE_NAME, ATTRIBUTE_DISTANCE };
-				int[] to = { R.id.text_item_id, R.id.text_item_name, R.id.text_item_distance };
-				mSimpleAdapter = new SimpleAdapter(mParentContext, mAdapterData, R.layout.item_list, from, to);
-				mVenuesListView.setAdapter(mSimpleAdapter);
+				getListView().setOnScrollListener(this);
 		}
 
 		@Override public void onResume() {
 				Log.d(TAG, "onResume: ");
 				super.onResume();
-				updateLocation();
+				//setVisibleBounds(mVisibleBounds);
+		}
+
+		@Override public void onSaveInstanceState(Bundle outState) {
+				outState.putParcelable(BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
+				super.onSaveInstanceState(outState);
 		}
 
 		@Override public void onDetach() {
@@ -100,13 +102,13 @@ public class ListFragment extends Fragment implements AdapterView.OnItemClickLis
 				mParentContext = null;
 		}
 
-
 		//==============================================================================================
-		@Override public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-				Log.d(TAG, "onItemClick: ");
+		@Override public void onListItemClick(ListView listView, View view, int position, long id) {
+				super.onListItemClick(listView, view, position, id);
+				Log.d(TAG, "onListItemClick: ");
+				String venueId = mAdapterData.get(position).get(ATTRIBUTE_ID).toString();
 				FragmentTransaction fragmentTransaction = ((FragmentActivity)mParentContext).getSupportFragmentManager().beginTransaction();
 				DetailsFragment detailsFragment = new DetailsFragment();
-				String venueId = ((TextView)view.findViewById(R.id.text_item_id)).getText().toString();
 				detailsFragment.setVenueId(venueId);
 				detailsFragment.show(fragmentTransaction, "venueDetails");
 		}
@@ -119,13 +121,12 @@ public class ListFragment extends Fragment implements AdapterView.OnItemClickLis
 				int totalItemCount) {
 				if (view.getLastVisiblePosition() == totalItemCount - 1 && !isLoading) {
 						isLoading = true;
-						mVenuesListView.addFooterView(mFooterLoadingView);
+						getListView().addFooterView(mFooterLoadingView);
 
-						LatLngBounds visibleBounds = ((MainApplication) mParentContext.getApplicationContext()).mVisibleArea;
-						LatLng sountWest = SphericalUtil.computeOffset(visibleBounds.southwest, 200, 225);
-						LatLng northEast = SphericalUtil.computeOffset(visibleBounds.northeast, 200, 45);
-						((MainApplication) mParentContext.getApplicationContext()).mVisibleArea = new LatLngBounds(sountWest, northEast);
-						mCallback.loadMoreVenues(visibleBounds);
+						LatLng sountWest = SphericalUtil.computeOffset(mVisibleBounds.southwest, 200, 225);
+						LatLng northEast = SphericalUtil.computeOffset(mVisibleBounds.northeast, 200, 45);
+						mVisibleBounds = new LatLngBounds(sountWest, northEast);
+						mCallback.loadMoreVenues(mVisibleBounds);
 				}
 		}
 
@@ -147,25 +148,31 @@ public class ListFragment extends Fragment implements AdapterView.OnItemClickLis
 		}
 
 		//==============================================================================================
-		public void updateLocation() {
-				Log.d(TAG, "updateLocation: ");
-				LatLngBounds visibleBounds = ((MainApplication) mParentContext.getApplicationContext()).mVisibleArea;
-				mCurrentPosition = visibleBounds.getCenter();
+		public LatLngBounds getVisibleBounds(){
+				return mVisibleBounds;
+		}
+
+		public void setVisibleBounds(LatLngBounds visibleBounds) {
+				Log.d(TAG, "setVisibleBounds: ");
+				mVisibleBounds = visibleBounds;
+
+				LatLng centerPosition = mVisibleBounds.getCenter();
+				LatLng sountWest = SphericalUtil.computeOffset(centerPosition, 1000, 225);
+				LatLng northEast = SphericalUtil.computeOffset(centerPosition, 1000, 45);
+				mVisibleBounds = new LatLngBounds(sountWest, northEast);
 
 				mVenues.clear();
 				mAdapterData.clear();
-				mSimpleAdapter.notifyDataSetChanged();
-
-				LatLng sountWest = SphericalUtil.computeOffset(mCurrentPosition, 1000, 225);
-				LatLng northEast = SphericalUtil.computeOffset(mCurrentPosition, 1000, 45);
-				((MainApplication) mParentContext.getApplicationContext()).mVisibleArea = new LatLngBounds(sountWest, northEast);
-				mCallback.loadMoreVenues(visibleBounds);
+				if (mSimpleAdapter != null) {
+						mSimpleAdapter.notifyDataSetChanged();
+				}
 		}
 
+		//FIXME sort venues in Cursor. Use Matrix cursor for sorting and update then cursor. Don't use ArrayList sorting
 		public void venuesDataReceived(Cursor data){
 				Log.d(TAG, "venuesDataReceived:");
+
 				if(data != null && data.moveToFirst()) {
-						Log.d(TAG, "venuesDataReceived: data.getCount() = " + data.getCount());
 						int indexId = data.getColumnIndex(DBContract.VENUE_ID);
 						int indexName = data.getColumnIndex(DBContract.VENUE_NAME);
 						int indexLat = data.getColumnIndex(DBContract.VENUE_LAT);
@@ -176,7 +183,8 @@ public class ListFragment extends Fragment implements AdapterView.OnItemClickLis
 								double latitude = data.getDouble(indexLat);
 								double longitude = data.getDouble(indexLng);
 								LatLng venuePosition = new LatLng(latitude, longitude);
-								int venueDistance = calculateDistance(mCurrentPosition, venuePosition);
+								LatLng centerPosition = mVisibleBounds.getCenter();
+								int venueDistance = calculateDistance(centerPosition, venuePosition);
 								Venue venue = new Venue(venueId, venueName);
 								venue.setDistance(venueDistance);
 								if(!mVenues.contains(venue)){
@@ -204,16 +212,12 @@ public class ListFragment extends Fragment implements AdapterView.OnItemClickLis
 						mAdapterData.add(dataMap);
 				}
 
+
 				mSimpleAdapter.notifyDataSetChanged();
 				//Remove loading view from footer
 				if(isLoading){
 						isLoading = false;
-						mVenuesListView.removeFooterView(mFooterLoadingView);
+						getListView().removeFooterView(mFooterLoadingView);
 				}
-		}
-
-		//==============================================================================================
-		public interface OnLoadMoreListener {
-				void loadMoreVenues(LatLngBounds bounds);
 		}
 }

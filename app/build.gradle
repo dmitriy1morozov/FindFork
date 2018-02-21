@@ -23,12 +23,8 @@ android {
 }
 
 
-
 dependencies {
-  compile 'com.facebook.stetho:stetho:1.5.0'
-  compile 'com.google.maps.android:android-maps-utils:0.5+'
-
-  compile fileTree(include: ['*.jar'], dir: 'libs')
+  implementation fileTree(include: ['*.jar'], dir: 'libs')
   // Tests
   androidTestCompile(tests.espresso,
       {
@@ -36,20 +32,23 @@ dependencies {
       })
   testCompile tests.junit
   // Android support
-  compile support.appcompat7
-  compile support.support4
-  compile support.design
-  compile support.constraintLayout
-  compile support.recyclerview
+  implementation support.appcompat7
+  implementation support.support4
+  implementation support.design
+  implementation support.constraintLayout
+  implementation support.recyclerview
   // ButterKnife
-  compile jakewharton.butterknife
+  implementation jakewharton.butterknife
   annotationProcessor jakewharton.butterknifeCompiler
   //GooglePlayServices
-  compile googleplay.services
-  compile googleplay.location
+  implementation googleplay.services
+  implementation googleplay.location
+  implementation googleplay.mapsUtils
   //Retrofit
-  compile squareup.retrofit
-  compile squareup.converterGson
+  implementation squareup.retrofit
+  implementation squareup.converterGson
   //Annotations for Java SE5
-  compile annotation.annotation
+  implementation annotation.annotation
+  //Stetho
+  implementation facebook.stetho
 }

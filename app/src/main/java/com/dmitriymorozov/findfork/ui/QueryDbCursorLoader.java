@@ -18,7 +18,7 @@ class QueryDbCursorLoader extends CursorLoader {
 		private final String[] mSelectionArgs;
 		private final String mSortOrder;
 
-		public QueryDbCursorLoader(Context context, Uri uri, String[] projection, String selection,
+		QueryDbCursorLoader(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {
 				super(context, uri, projection, selection, selectionArgs, sortOrder);
 				mUri = uri;

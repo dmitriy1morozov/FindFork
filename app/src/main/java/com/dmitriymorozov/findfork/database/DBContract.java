@@ -1,8 +1,9 @@
 package com.dmitriymorozov.findfork.database;
 
+import android.provider.BaseColumns;
 import java.util.Locale;
 
-public class DBContract{
+public class DBContract implements BaseColumns {
 		static final int DB_VERSION = 1;
 
 		static final String DB_NAME = "foursquare";
@@ -26,27 +27,27 @@ public class DBContract{
 
 		static final String CREATE_TABLE_VENUES = String.format(Locale.US,
 				"create table %s "
-						+ "(%s text primary key, "
-						+ "%s text, %s real, %s real, %s real, %s text, "
+						+ "(%s integer primary key, "
+						+ "%s text, %s text, %s real, %s real, %s real, %s text, "
 						+ "UNIQUE(%s));",
 				TABLE_VENUES,
-				VENUE_ID,
-				VENUE_NAME, VENUE_LAT, VENUE_LNG, VENUE_RATING, VENUE_RATING_SUBMITTER,
-				VENUE_ID
+				_ID,
+				VENUE_ID, VENUE_NAME, VENUE_LAT, VENUE_LNG, VENUE_RATING, VENUE_RATING_SUBMITTER,
+				_ID
 				);
 
 		static final String CREATE_TABLE_DETAILS = String.format(Locale.US,
 				"create table %s "
-						+ "(%s text primary key, "
-						+ "%s text, %s text, %s text, %s text, "
+						+ "(%s integer primary key, "
+						+ "%s text, %s text, %s text, %s text, %s text, "
 						+ "%s integer, %s text, %s text, "
 						+ "foreign key (%s) references %s (%s) ON DELETE CASCADE, "
 						+ "UNIQUE(%s));",
 				TABLE_DETAILS,
-				VENUE_ID,
-				DETAILS_ADDRESS_FORMATTED, DETAILS_PHONE, DETAILS_PHONE_FORMATTED, DETAILS_SITE_URL,
+				_ID,
+				VENUE_ID, DETAILS_ADDRESS_FORMATTED, DETAILS_PHONE, DETAILS_PHONE_FORMATTED, DETAILS_SITE_URL,
 				DETAILS_PRICE_TIER, DETAILS_PRICE_CURRENCY, DETAILS_PRICE_MESSAGE,
-				VENUE_ID, TABLE_VENUES, VENUE_ID,
-				VENUE_ID
+				_ID, TABLE_VENUES, _ID,
+				_ID
 		);
 }
