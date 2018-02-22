@@ -13,6 +13,7 @@ import com.dmitriymorozov.findfork.model.explorePOJO.ErrorResponse;
 import com.dmitriymorozov.findfork.model.explorePOJO.FoursquareJSON;
 import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.model.explorePOJO.Meta;
+import com.dmitriymorozov.findfork.util.Util;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.gson.Gson;
 import java.lang.ref.WeakReference;
@@ -35,8 +36,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 				 * Api --> local DB layer
 				 */
 				public void downloadVenuesByRectangleFromApi(LatLngBounds bounds){
-						LatLngBounds newBounds = mServiceHelper.expandRegionBy(bounds,
-								EXPAND_REGION_DEFAULT_COEF);
+						LatLngBounds newBounds = Util.expandRegionBy(bounds, EXPAND_REGION_DEFAULT_COEF);
 						Log.d(TAG, "downloadVenuesByRectangleFromApi: ");
 						String sw = String.format(Locale.US, "%s,%s", newBounds.southwest.latitude, newBounds.southwest.longitude);
 						String ne = String.format(Locale.US, "%s,%s", newBounds.northeast.latitude, newBounds.northeast.longitude);
@@ -51,8 +51,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 				//
 				public void removeOutsideVenuesFromLocalDb(LatLngBounds bounds) {
 						//TODO POSSIBLE CPU consuming operation put into AsyncTask (or thread)
-						LatLngBounds newBounds = mServiceHelper.expandRegionBy(bounds,
-								EXPAND_REGION_DEFAULT_COEF);
+						LatLngBounds newBounds = Util.expandRegionBy(bounds, EXPAND_REGION_DEFAULT_COEF);
 						double south = newBounds.southwest.latitude;
 						double north = newBounds.northeast.latitude;
 						double west = newBounds.southwest.longitude;
@@ -98,11 +97,9 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 
 		private ApiFoursquare mRetrofit;
 		private WeakReference<OnServiceListener> mCallbackRef;
-		private ServiceHelper mServiceHelper;
 
 		public FoursquareService() {
 				mRetrofit = ApiFoursquare.mRetrofit.create(ApiFoursquare.class);
-				mServiceHelper = new ServiceHelper();
 		}
 
 		@Override public IBinder onBind(Intent intent) {
@@ -117,10 +114,10 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 
 		@Override public void onFailure(@NonNull Call<FoursquareJSON> call, @NonNull
 				Throwable t) {
-				String errorType = "Retrofit onFailure";
 				String errorDetail = t.getMessage();
 				Log.d(TAG, "Retrofit onFailure: " + errorDetail);
 				if(mCallbackRef != null && mCallbackRef.get() != null){
+						String errorType = "Retrofit onFailure";
 						mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
 				}
 		}
@@ -140,9 +137,9 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 				}
 
 				List<ItemsItem> apiItems = response.body().getResponse().getGroups().get(0).getItems();
-				if (apiItems.size() != 0) {
-						ContentValues[] venues = mServiceHelper.createVenuesContentValuesArray(apiItems);
-						ContentValues[] details = mServiceHelper.createDetailsContentValuesArray(apiItems);
+				if (!apiItems.isEmpty()) {
+						ContentValues[] venues = Util.createVenuesContentValuesArray(apiItems);
+						ContentValues[] details = Util.createDetailsContentValuesArray(apiItems);
 						getContentResolver().bulkInsert(URI_CONTENT_VENUES, venues);
 						getContentResolver().bulkInsert(URI_CONTENT_DETAILS, details);
 				}

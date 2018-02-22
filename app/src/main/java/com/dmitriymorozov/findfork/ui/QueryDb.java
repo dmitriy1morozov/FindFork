@@ -6,26 +6,26 @@ import android.net.Uri;
 import android.support.v4.content.CursorLoader;
 import android.util.Log;
 
-class QueryDbCursorLoader extends CursorLoader {
-		private static final String TAG = "MyLogs Query";
+class QueryDb extends CursorLoader {
+		private static final String TAG = "MyLogs QueryDb";
 
 		static final int ID_MAIN = 1;
 		static final int ID_VENUE_GENERAL = 2;
 		static final int ID_VENUE_DETAILS = 3;
 
-		private final Uri mUri;
-		private final String mSelection;
-		private final String[] mSelectionArgs;
-		private final String mSortOrder;
+		private Uri mUri;
+		private String mSelection;
+		private String[] mSelectionArgs;
+		private String mSortOrder;
 
-		QueryDbCursorLoader(Context context, Uri uri, String[] projection, String selection,
+		QueryDb(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {
 				super(context, uri, projection, selection, selectionArgs, sortOrder);
 				mUri = uri;
 				mSelection = selection;
 				mSelectionArgs = selectionArgs;
 				mSortOrder = sortOrder;
-				this.setUpdateThrottle(1000);
+				setUpdateThrottle(1000);
 		}
 
 		@Override

@@ -35,13 +35,13 @@ public class MyContentProvider extends ContentProvider {
 		private static final int URI_MATCH_DETAILS_SINGLE = 3;
 		private static final int URI_MATCH_DETAILS_MULTIPLE = 4;
 
-		private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+		private static final UriMatcher URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
 		static
 		{
-				sUriMatcher.addURI(AUTHORITY, TABLE_VENUES + "/*", URI_MATCH_VENUE_SINGLE);
-				sUriMatcher.addURI(AUTHORITY, TABLE_VENUES, URI_MATCH_VENUE_MULTIPLE);
-				sUriMatcher.addURI(AUTHORITY, TABLE_DETAILS + "/*", URI_MATCH_DETAILS_SINGLE);
-				sUriMatcher.addURI(AUTHORITY, TABLE_DETAILS, URI_MATCH_DETAILS_MULTIPLE);
+				URI_MATCHER.addURI(AUTHORITY, TABLE_VENUES + "/*", URI_MATCH_VENUE_SINGLE);
+				URI_MATCHER.addURI(AUTHORITY, TABLE_VENUES, URI_MATCH_VENUE_MULTIPLE);
+				URI_MATCHER.addURI(AUTHORITY, TABLE_DETAILS + "/*", URI_MATCH_DETAILS_SINGLE);
+				URI_MATCHER.addURI(AUTHORITY, TABLE_DETAILS, URI_MATCH_DETAILS_MULTIPLE);
 		}
 
 		private DBHelper mDbHelper;
@@ -58,11 +58,11 @@ public class MyContentProvider extends ContentProvider {
 		@Override public Uri insert(@NonNull Uri uri, ContentValues values) {
 				mSqliteDatabase = mDbHelper.getWritableDatabase();
 				Uri resultUri;
-				if(sUriMatcher.match(uri) == URI_MATCH_VENUE_MULTIPLE){
+				if(URI_MATCHER.match(uri) == URI_MATCH_VENUE_MULTIPLE){
 						Log.d(TAG, "insertVENUES: values = " + values);
 						long rowId = mSqliteDatabase.insertWithOnConflict(TABLE_VENUES, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 						resultUri = ContentUris.withAppendedId(URI_CONTENT_VENUES, rowId);
-				} else if(sUriMatcher.match(uri) == URI_MATCH_DETAILS_MULTIPLE){
+				} else if(URI_MATCHER.match(uri) == URI_MATCH_DETAILS_MULTIPLE){
 						Log.d(TAG, "insertDETAILS: values = " + values);
 						long rowId = mSqliteDatabase.insertWithOnConflict(TABLE_DETAILS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 						resultUri = ContentUris.withAppendedId(URI_CONTENT_DETAILS, rowId);
@@ -81,7 +81,7 @@ public class MyContentProvider extends ContentProvider {
 				mSqliteDatabase = mDbHelper.getWritableDatabase();
 				int rowsRemoved;
 
-				switch (sUriMatcher.match(uri)){
+				switch (URI_MATCHER.match(uri)){
 						case URI_MATCH_VENUE_MULTIPLE:
 								rowsRemoved = mSqliteDatabase.delete(TABLE_VENUES, selection, selectionArgs);
 
@@ -102,7 +102,7 @@ public class MyContentProvider extends ContentProvider {
 				mSqliteDatabase = mDbHelper.getWritableDatabase();
 				int rowsUpdated;
 
-				switch (sUriMatcher.match(uri)){
+				switch (URI_MATCHER.match(uri)){
 						case URI_MATCH_VENUE_MULTIPLE:
 								rowsUpdated = mSqliteDatabase.update(TABLE_VENUES, values, selection, selectionArgs);
 								break;
@@ -123,7 +123,7 @@ public class MyContentProvider extends ContentProvider {
 
 				String tableName;
 				Uri uriContent;
-				switch (sUriMatcher.match(uri)){
+				switch (URI_MATCHER.match(uri)){
 						case URI_MATCH_VENUE_MULTIPLE:
 								Log.d(TAG, "query VENUES_MULTIPLE");
 								tableName = TABLE_VENUES;
@@ -159,7 +159,7 @@ public class MyContentProvider extends ContentProvider {
 
 		@Override public String getType(@NonNull Uri uri) {
 				Log.d(TAG, "getType: ");
-				switch (sUriMatcher.match(uri)){
+				switch (URI_MATCHER.match(uri)){
 						case URI_MATCH_VENUE_SINGLE:
 								return CONTENT_TYPE_VENUE_SINGLE;
 						case URI_MATCH_VENUE_MULTIPLE:

@@ -68,11 +68,11 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				}
 				View rootView = inflater.inflate(R.layout.fragment_details, container, false);
 				mUnbinder = ButterKnife.bind(this, rootView);
-				mRatingSeekBar.setOnSeekBarChangeListener(DetailsFragment.this);
+				mRatingSeekBar.setOnSeekBarChangeListener(this);
 
 				Bundle generalBundle = new Bundle();
 				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
-				getActivity().getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_VENUE_GENERAL, generalBundle, DetailsFragment.this);
+				getActivity().getSupportLoaderManager().restartLoader(QueryDb.ID_VENUE_GENERAL, generalBundle, this);
 				return rootView;
 		}
 
@@ -111,12 +111,12 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 				String[] selectionArgs = { mVenueId };
 
-				return new QueryDbCursorLoader(getActivity(), contentUri, null, selection, selectionArgs, null);
+				return new QueryDb(getActivity(), contentUri, null, selection, selectionArgs, null);
 		}
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
-				if(!parseGeneral(data)){
-						parseDetails(data);
+				if(!isParseGeneral(data)){
+						parseDetailsAndDisplay(data);
 				}
 		}
 		@Override public void onLoaderReset(Loader<Cursor> loader) {
@@ -163,12 +163,12 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 										contentValues.put(DBContract.VENUE_RATING, rating);
 										contentValues.put(DBContract.VENUE_RATING_SUBMITTER, submitter);
 										String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
-										String[] selectionArgs = new String[]{mVenueId};
+										String[] selectionArgs = {mVenueId};
 
 										getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
 								}
 						});
-						DetailsFragment.this.dismiss();
+						this.dismiss();
 				}
 		}
 
@@ -188,8 +188,8 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		 * @return true if found general info about venue in cursor:
 		 * venueName, venueRating, venueRatingSubmitter
 		 */
-		private boolean parseGeneral(Cursor data) {
-				Log.d(TAG, "parseGeneral: ");
+		private boolean isParseGeneral(Cursor data) {
+				Log.d(TAG, "isParseGeneral: ");
 				if(data != null && data.moveToFirst() && data.getColumnIndex(DBContract.VENUE_NAME) != -1){
 						int indexName = data.getColumnIndex(DBContract.VENUE_NAME);
 						int indexRating = data.getColumnIndex(DBContract.VENUE_RATING);
@@ -206,14 +206,14 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 						Bundle detailsBundle = new Bundle();
 						detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
-						getActivity().getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_VENUE_DETAILS, detailsBundle, DetailsFragment.this);
+						getActivity().getSupportLoaderManager().restartLoader(QueryDb.ID_VENUE_DETAILS, detailsBundle, this);
 						return true;
 				}
 				return false;
 		}
 
-		private void parseDetails(Cursor data) {
-				Log.d(TAG, "parseDetails: ");
+		private void parseDetailsAndDisplay(Cursor data) {
+				Log.d(TAG, "parseDetailsAndDisplay: ");
 				if(data != null && data.moveToFirst()){
 						int indexAddress = data.getColumnIndex(DBContract.DETAILS_ADDRESS_FORMATTED);
 						int indexPhone = data.getColumnIndex(DBContract.DETAILS_PHONE);

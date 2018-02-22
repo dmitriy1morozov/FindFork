@@ -1,4 +1,4 @@
-package com.dmitriymorozov.findfork.service;
+package com.dmitriymorozov.findfork.util;
 
 import android.content.ContentValues;
 import android.support.annotation.NonNull;
@@ -9,12 +9,31 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import java.util.List;
 
-class ServiceHelper {
+import static com.dmitriymorozov.findfork.util.Constants.*;
+
+public class Util {
+
+		/**
+		 * Calculates distance in meters between two points
+		 */
+		public static int calculateDistance(LatLng point1, LatLng point2) {
+				double lat1 = point1.latitude;
+				double lng1 = point1.longitude;
+				double lat2 = point2.latitude;
+				double lng2 = point2.longitude;
+				double dLat = Math.toRadians(lat2-lat1);
+				double dLng = Math.toRadians(lng2-lng1);
+				double a =  Math.sin(dLat/2) * Math.sin(dLat/2) +
+						Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+								Math.sin(dLng/2) * Math.sin(dLng/2);
+				double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+				return  (int) (EARTH_RADIUS * c);
+		}
 
 		/**
 		 * Utility method to expand the provided LatLng rectangle by the given coefficient
 		 */
-		LatLngBounds expandRegionBy(LatLngBounds bounds, double coef) {
+		public static LatLngBounds expandRegionBy(LatLngBounds bounds, double coef) {
 				double south = bounds.southwest.latitude;
 				double north = bounds.northeast.latitude;
 				double west = bounds.southwest.longitude;
@@ -30,7 +49,10 @@ class ServiceHelper {
 				return new LatLngBounds(new LatLng(south - heightDelta, west - widthDelta), new LatLng(north + heightDelta, east + widthDelta));
 		}
 
-		ContentValues[] createVenuesContentValuesArray(@NonNull List<ItemsItem> venueList){
+		/**
+		 * Utility method to convert List<ItemsItem> into venues ContentValues[] structure
+		 */
+		public static ContentValues[] createVenuesContentValuesArray(@NonNull List<ItemsItem> venueList){
 				int venueListSize = venueList.size();
 				ContentValues[] contentValues = new ContentValues[venueListSize];
 				for (int i = 0; i < venueListSize; i++) {
@@ -51,7 +73,10 @@ class ServiceHelper {
 				return contentValues;
 		}
 
-		ContentValues[] createDetailsContentValuesArray(@NonNull List<ItemsItem> venueList){
+		/**
+		 * Utility method to convert List<ItemsItem> into details ContentValues[] structure
+		 */
+		public static ContentValues[] createDetailsContentValuesArray(@NonNull List<ItemsItem> venueList){
 				int venueListSize = venueList.size();
 				ContentValues[] contentValues = new ContentValues[venueListSize];
 				for (int i = 0; i < venueListSize; i++) {
@@ -90,8 +115,10 @@ class ServiceHelper {
 				return contentValues;
 		}
 
-		//----------------------------------------------------------------------------------------------
-		private String formattedAddressToString(List<String> formattedAddress){
+		/**
+		 * Convert List<String> of formatted address details into a single String
+		 */
+		private static String formattedAddressToString(List<String> formattedAddress){
 				int listSize = formattedAddress.size();
 				StringBuilder stringBuilder = new StringBuilder();
 				for (int i = 0; i < listSize - 1; i++) {

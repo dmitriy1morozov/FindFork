@@ -29,6 +29,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.Checkable;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
@@ -39,7 +40,6 @@ import butterknife.OnClick;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
-import com.dmitriymorozov.findfork.model.Venue;
 import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.dmitriymorozov.findfork.service.OnServiceListener;
 import com.google.android.gms.common.api.Status;
@@ -54,19 +54,14 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
-import static com.dmitriymorozov.findfork.ui.Constants.DEFAULT_VISIBLE_BOUNDS;
-import static com.dmitriymorozov.findfork.ui.Constants.LOCATION_DEFAULT;
+import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class MainActivity extends AppCompatActivity
 		implements PlaceSelectionListener, OnCompleteListener<Location>, OnServiceListener,
-		LoaderManager.LoaderCallbacks<Cursor>, MapFragment.OnMapFragmentListener,
-		ListFragment.OnLoadMoreListener {
+		LoaderManager.LoaderCallbacks<Cursor>, MapFragment.OnMapFragmentListener, OnLoadMoreListener {
 		private static final String TAG = "MyLogs MainActivity";
 		private static final int RC_LOCATION_PERMISSIONS = 1;
 		private static final boolean TOGGLE_MAP = true;
@@ -101,7 +96,6 @@ public class MainActivity extends AppCompatActivity
 				setContentView(R.layout.activity_main);
 				ButterKnife.bind(this);
 
-				//FixMe Ask for permissions at the very beginning
 				mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 				if (savedInstanceState == null) {
 						Log.d(TAG, "onCreate: Initial State");
@@ -133,7 +127,7 @@ public class MainActivity extends AppCompatActivity
 						@Override public void onChange(boolean selfChange) {
 								super.onChange(selfChange);
 								Log.d(TAG, "ContentObserver onChange: ");
-								Loader loader = getSupportLoaderManager().getLoader(QueryDbCursorLoader.ID_MAIN);
+								Loader loader = getSupportLoaderManager().getLoader(QueryDb.ID_MAIN);
 								if (loader != null) {
 										loader.forceLoad();
 								}
@@ -144,8 +138,7 @@ public class MainActivity extends AppCompatActivity
 								super.onChange(selfChange, uri);
 						}
 				};
-				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true,
-						mContentObserver);
+				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true, mContentObserver);
 		}
 
 		@Override protected void onStop() {
@@ -176,15 +169,14 @@ public class MainActivity extends AppCompatActivity
 						mMapFragment.venuesDataReceived(data);
 				}
 				if (mListFragment != null && mListFragment.isVisible()) {
-						mListFragment.venuesDataReceived(data);
+						mListFragment.venuesDownloaded(data);
 				}
 		}
 
 		private boolean hasGpsDevice(Context context) {
-				final LocationManager mgr =
-						(LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+				LocationManager mgr = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
 				if (mgr == null) return false;
-				final List<String> providers = mgr.getAllProviders();
+				List<String> providers = mgr.getAllProviders();
 				if (providers == null) return false;
 				return providers.contains(LocationManager.GPS_PROVIDER);
 		}
@@ -205,10 +197,10 @@ public class MainActivity extends AppCompatActivity
 				Bundle args = new Bundle();
 				args.putParcelable("bounds", bounds);
 				args.putDouble("minRatingFilter", minRatingFilter);
-				getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_MAIN, args, this);
+				getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
 		}
 
-		@Override public void loadMoreVenues(LatLngBounds bounds) {
+		@Override public void downloadMoreVenues(LatLngBounds bounds) {
 				if (mBinder != null) {
 						mBinder.removeOutsideVenuesFromLocalDb(bounds);
 						mBinder.downloadVenuesByRectangleFromApi(bounds);
@@ -218,7 +210,7 @@ public class MainActivity extends AppCompatActivity
 				Bundle args = new Bundle();
 				args.putParcelable("bounds", bounds);
 				args.putDouble("minRatingFilter", 0);
-				getSupportLoaderManager().restartLoader(QueryDbCursorLoader.ID_MAIN, args, this);
+				getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
 		}
 		//==============================================================================================
 
@@ -230,11 +222,10 @@ public class MainActivity extends AppCompatActivity
 						mAutocompleteFragment.setText("");
 				}
 
-				final LocationManager locationManager =
-						(LocationManager) getSystemService(Context.LOCATION_SERVICE);
+				LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 				if (locationManager != null && !locationManager.isProviderEnabled(
-						LocationManager.GPS_PROVIDER) && hasGpsDevice(MainActivity.this)) {
-						Toast.makeText(MainActivity.this, "Please enable GPS to locate your position",
+						LocationManager.GPS_PROVIDER) && hasGpsDevice(this)) {
+						Toast.makeText(this, "Please enable GPS to locate your position",
 								Toast.LENGTH_SHORT).show();
 						enableGps();
 				}
@@ -246,8 +237,9 @@ public class MainActivity extends AppCompatActivity
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
 						&& hasCoarseLocationPermissions != PackageManager.PERMISSION_GRANTED
 						&& hasFineLocationPermissions != PackageManager.PERMISSION_GRANTED) {
+
 						String requestString[] = { Manifest.permission.ACCESS_FINE_LOCATION };
-						ActivityCompat.requestPermissions(MainActivity.this, requestString,
+						ActivityCompat.requestPermissions(this, requestString,
 								RC_LOCATION_PERMISSIONS);
 				} else {
 						mFusedLocationClient.getLastLocation().addOnCompleteListener(this, this);
@@ -259,12 +251,11 @@ public class MainActivity extends AppCompatActivity
 		 *
 		 * @param view - ref to ToogleButton
 		 */
-		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(CompoundButton view) {
+		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(android.widget.Checkable view) {
 				boolean mode = view.isChecked();
 				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 
 				if (mode == TOGGLE_LIST) {
-
 						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
 						if (mMapFragment != null) {
 								visibleBounds = mMapFragment.getVisibleBounds();
@@ -273,8 +264,9 @@ public class MainActivity extends AppCompatActivity
 						if (mListFragment == null) {
 								mListFragment = new ListFragment();
 						}
-						//mListFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, "list");
+						fragmentTransaction.commitNow();
+						mListFragment.setVisibleBounds(visibleBounds);
 				}
 				if (mode == TOGGLE_MAP) {
 						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
@@ -285,10 +277,10 @@ public class MainActivity extends AppCompatActivity
 						if (mMapFragment == null) {
 								mMapFragment = new MapFragment();
 						}
-						mMapFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, "map");
+						fragmentTransaction.commitNow();
+						mMapFragment.setVisibleBounds(visibleBounds);
 				}
-				fragmentTransaction.commit();
 		}
 
 		//----------------------------------------------------------------------------------------------
@@ -304,13 +296,13 @@ public class MainActivity extends AppCompatActivity
 						Location location = task.getResult();
 						deviceLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 				} else {
-						Toast.makeText(MainActivity.this, "ErrorResponse! Couldn't detect your location",
+						Toast.makeText(this, "ErrorResponse! Couldn't detect your location",
 								Toast.LENGTH_SHORT).show();
 						deviceLatLng = LOCATION_DEFAULT;
 				}
 
-				LatLng sountWest = SphericalUtil.computeOffset(deviceLatLng, 200, 225);
-				LatLng northEast = SphericalUtil.computeOffset(deviceLatLng, 200, 45);
+				LatLng sountWest = SphericalUtil.computeOffset(deviceLatLng, 200, SOUTH_WEST_DEGREES);
+				LatLng northEast = SphericalUtil.computeOffset(deviceLatLng, 200, NORTH_EAST_DEGREES);
 				LatLngBounds visibleBounds = new LatLngBounds(sountWest, northEast);
 				updateLocationInFragment(visibleBounds);
 		}
@@ -374,7 +366,7 @@ public class MainActivity extends AppCompatActivity
 				//FixMe Repeated action similar to actions in Service
 				String selectionLng;
 				String selectionLat;
-				ArrayList<String> selectionArgsList = new ArrayList<>();
+				List<String> selectionArgsList = new ArrayList<>();
 				String sortOrder = String.format(Locale.US, "%s DESC", DBContract.VENUE_RATING);
 
 				//Latitude selection
@@ -408,7 +400,7 @@ public class MainActivity extends AppCompatActivity
 						selectionRating);
 				String[] selectionArgs = new String[selectionArgsList.size()];
 				selectionArgsList.toArray(selectionArgs);
-				return new QueryDbCursorLoader(this, uri, null, selection, selectionArgs, sortOrder);
+				return new QueryDb(this, uri, null, selection, selectionArgs, sortOrder);
 		}
 
 		/**
@@ -458,8 +450,7 @@ public class MainActivity extends AppCompatActivity
 														.setAction("Grant", new View.OnClickListener() {
 																@Override public void onClick(View v) {
 																		Intent permissions = new Intent();
-																		permissions.setAction(
-																				Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+																		permissions.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 																		Uri uri = Uri.fromParts("package", getPackageName(), null);
 																		permissions.setData(uri);
 																		permissions.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

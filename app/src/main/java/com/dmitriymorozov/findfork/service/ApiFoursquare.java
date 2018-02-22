@@ -10,7 +10,7 @@ import retrofit2.http.Query;
 interface ApiFoursquare {
 
 		String BASE_URL = "https://api.foursquare.com/v2/venues/";
-		long VERSION = 20180102;
+		int VERSION = 20180102;
 
 		@GET("explore?v=" + VERSION)
 		Call<FoursquareJSON> getNearbyPlacesByRectangle(
