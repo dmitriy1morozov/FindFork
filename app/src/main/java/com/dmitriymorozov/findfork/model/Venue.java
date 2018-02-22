@@ -4,28 +4,22 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.maps.model.Marker;
 
 public class Venue implements Comparable<Venue>{
-		private int mId;
 		private final String mVenueId;
 		private final String mName;
 		private Marker mMarker;
 		private int mDistance;
 
-		public Venue(int id, String venueId, String name) {
-				this.mId = id;
-				this.mVenueId = venueId;
-				this.mName = name;
+		public Venue(String venueId, String name) {
+				mVenueId = venueId;
+				mName = name;
 		}
 
 		public void setMarker(Marker marker) {
-				this.mMarker = marker;
+				mMarker = marker;
 		}
 
 		public void setDistance(int distance) {
-				this.mDistance = distance;
-		}
-
-		public int getId() {
-				return mId;
+				mDistance = distance;
 		}
 
 		public String getVenueId() {
@@ -46,7 +40,7 @@ public class Venue implements Comparable<Venue>{
 
 		@Override public int compareTo(@NonNull Venue secondVenue) {
 				int secondDistance = secondVenue.getDistance();
-				return this.mDistance - secondDistance;
+				return mDistance - secondDistance;
 		}
 
 		@Override public boolean equals(Object obj) {

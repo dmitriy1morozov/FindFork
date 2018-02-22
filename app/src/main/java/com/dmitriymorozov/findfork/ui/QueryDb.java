@@ -13,10 +13,10 @@ class QueryDb extends CursorLoader {
 		static final int ID_VENUE_GENERAL = 2;
 		static final int ID_VENUE_DETAILS = 3;
 
-		private final Uri mUri;
-		private final String mSelection;
-		private final String[] mSelectionArgs;
-		private final String mSortOrder;
+		private Uri mUri;
+		private String mSelection;
+		private String[] mSelectionArgs;
+		private String mSortOrder;
 
 		QueryDb(Context context, Uri uri, String[] projection, String selection,
 				String[] selectionArgs, String sortOrder) {
@@ -25,7 +25,7 @@ class QueryDb extends CursorLoader {
 				mSelection = selection;
 				mSelectionArgs = selectionArgs;
 				mSortOrder = sortOrder;
-				this.setUpdateThrottle(1000);
+				setUpdateThrottle(1000);
 		}
 
 		@Override

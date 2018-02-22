@@ -29,6 +29,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.Checkable;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
@@ -56,14 +57,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import static com.dmitriymorozov.findfork.ui.Constants.DEFAULT_VISIBLE_BOUNDS;
-import static com.dmitriymorozov.findfork.ui.Constants.LOCATION_DEFAULT;
+import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class MainActivity extends AppCompatActivity
 		implements PlaceSelectionListener, OnCompleteListener<Location>, OnServiceListener,
-		LoaderManager.LoaderCallbacks<Cursor>, MapFragment.OnMapFragmentListener,
-		OnLoadMoreListener {
-
+		LoaderManager.LoaderCallbacks<Cursor>, MapFragment.OnMapFragmentListener, OnLoadMoreListener {
 		private static final String TAG = "MyLogs MainActivity";
 		private static final int RC_LOCATION_PERMISSIONS = 1;
 		private static final boolean TOGGLE_MAP = true;
@@ -98,7 +96,6 @@ public class MainActivity extends AppCompatActivity
 				setContentView(R.layout.activity_main);
 				ButterKnife.bind(this);
 
-				//FixMe Ask for permissions at the very beginning
 				mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 				if (savedInstanceState == null) {
 						Log.d(TAG, "onCreate: Initial State");
@@ -141,8 +138,7 @@ public class MainActivity extends AppCompatActivity
 								super.onChange(selfChange, uri);
 						}
 				};
-				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true,
-						mContentObserver);
+				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true, mContentObserver);
 		}
 
 		@Override protected void onStop() {
@@ -162,7 +158,6 @@ public class MainActivity extends AppCompatActivity
 				}
 				if (mListFragment != null && mListFragment.isVisible()) {
 						mListFragment.setVisibleBounds(visibleBounds);
-						downloadMoreVenues(visibleBounds);
 				}
 		}
 
@@ -173,17 +168,15 @@ public class MainActivity extends AppCompatActivity
 				if (mMapFragment != null && mMapFragment.isVisible()) {
 						mMapFragment.venuesDataReceived(data);
 				}
-				//if (mListFragment != null && mListFragment.isVisible()) {
-				//		//TODO use ListFragment modularty
-				//		mListFragment.venuesDataDownloaded();
-				//}
+				if (mListFragment != null && mListFragment.isVisible()) {
+						mListFragment.venuesDownloaded(data);
+				}
 		}
 
 		private boolean hasGpsDevice(Context context) {
-				final LocationManager mgr =
-						(LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+				LocationManager mgr = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
 				if (mgr == null) return false;
-				final List<String> providers = mgr.getAllProviders();
+				List<String> providers = mgr.getAllProviders();
 				if (providers == null) return false;
 				return providers.contains(LocationManager.GPS_PROVIDER);
 		}
@@ -214,12 +207,13 @@ public class MainActivity extends AppCompatActivity
 						mLoadingProgress.setVisibility(View.VISIBLE);
 				}
 				//Download from localDB using CursorLoader
-				//Bundle args = new Bundle();
-				//args.putParcelable("bounds", bounds);
-				//args.putDouble("minRatingFilter", 0);
-				//getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
+				Bundle args = new Bundle();
+				args.putParcelable("bounds", bounds);
+				args.putDouble("minRatingFilter", 0);
+				getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
 		}
 		//==============================================================================================
+
 		/**
 		 * device_location button onClickListener
 		 */
@@ -228,11 +222,10 @@ public class MainActivity extends AppCompatActivity
 						mAutocompleteFragment.setText("");
 				}
 
-				final LocationManager locationManager =
-						(LocationManager) getSystemService(Context.LOCATION_SERVICE);
+				LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 				if (locationManager != null && !locationManager.isProviderEnabled(
-						LocationManager.GPS_PROVIDER) && hasGpsDevice(MainActivity.this)) {
-						Toast.makeText(MainActivity.this, "Please enable GPS to locate your position",
+						LocationManager.GPS_PROVIDER) && hasGpsDevice(this)) {
+						Toast.makeText(this, "Please enable GPS to locate your position",
 								Toast.LENGTH_SHORT).show();
 						enableGps();
 				}
@@ -244,8 +237,9 @@ public class MainActivity extends AppCompatActivity
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
 						&& hasCoarseLocationPermissions != PackageManager.PERMISSION_GRANTED
 						&& hasFineLocationPermissions != PackageManager.PERMISSION_GRANTED) {
+
 						String requestString[] = { Manifest.permission.ACCESS_FINE_LOCATION };
-						ActivityCompat.requestPermissions(MainActivity.this, requestString,
+						ActivityCompat.requestPermissions(this, requestString,
 								RC_LOCATION_PERMISSIONS);
 				} else {
 						mFusedLocationClient.getLastLocation().addOnCompleteListener(this, this);
@@ -254,9 +248,10 @@ public class MainActivity extends AppCompatActivity
 
 		/**
 		 * Map / List toggle_mode button onClickListener
+		 *
 		 * @param view - ref to ToogleButton
 		 */
-		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(CompoundButton view) {
+		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(android.widget.Checkable view) {
 				boolean mode = view.isChecked();
 				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 
@@ -269,8 +264,9 @@ public class MainActivity extends AppCompatActivity
 						if (mListFragment == null) {
 								mListFragment = new ListFragment();
 						}
-						mListFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, "list");
+						fragmentTransaction.commitNow();
+						mListFragment.setVisibleBounds(visibleBounds);
 				}
 				if (mode == TOGGLE_MAP) {
 						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
@@ -281,10 +277,10 @@ public class MainActivity extends AppCompatActivity
 						if (mMapFragment == null) {
 								mMapFragment = new MapFragment();
 						}
-						mMapFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, "map");
+						fragmentTransaction.commitNow();
+						mMapFragment.setVisibleBounds(visibleBounds);
 				}
-				fragmentTransaction.commit();
 		}
 
 		//----------------------------------------------------------------------------------------------
@@ -300,13 +296,13 @@ public class MainActivity extends AppCompatActivity
 						Location location = task.getResult();
 						deviceLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 				} else {
-						Toast.makeText(MainActivity.this, "ErrorResponse! Couldn't detect your location",
+						Toast.makeText(this, "ErrorResponse! Couldn't detect your location",
 								Toast.LENGTH_SHORT).show();
 						deviceLatLng = LOCATION_DEFAULT;
 				}
 
-				LatLng sountWest = SphericalUtil.computeOffset(deviceLatLng, 200, 225);
-				LatLng northEast = SphericalUtil.computeOffset(deviceLatLng, 200, 45);
+				LatLng sountWest = SphericalUtil.computeOffset(deviceLatLng, 200, SOUTH_WEST_DEGREES);
+				LatLng northEast = SphericalUtil.computeOffset(deviceLatLng, 200, NORTH_EAST_DEGREES);
 				LatLngBounds visibleBounds = new LatLngBounds(sountWest, northEast);
 				updateLocationInFragment(visibleBounds);
 		}
@@ -336,10 +332,6 @@ public class MainActivity extends AppCompatActivity
 		@Override public void onNetworkJobsFinished() {
 				Log.d(TAG, "onServiceWorkFinished: ");
 				mLoadingProgress.setVisibility(View.GONE);
-
-				if (mListFragment != null && mListFragment.isVisible()) {
-						//mListFragment.venuesDataDownloaded();
-				}
 		}
 
 		/**
@@ -374,7 +366,7 @@ public class MainActivity extends AppCompatActivity
 				//FixMe Repeated action similar to actions in Service
 				String selectionLng;
 				String selectionLat;
-				ArrayList<String> selectionArgsList = new ArrayList<>();
+				List<String> selectionArgsList = new ArrayList<>();
 				String sortOrder = String.format(Locale.US, "%s DESC", DBContract.VENUE_RATING);
 
 				//Latitude selection
@@ -458,8 +450,7 @@ public class MainActivity extends AppCompatActivity
 														.setAction("Grant", new View.OnClickListener() {
 																@Override public void onClick(View v) {
 																		Intent permissions = new Intent();
-																		permissions.setAction(
-																				Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+																		permissions.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 																		Uri uri = Uri.fromParts("package", getPackageName(), null);
 																		permissions.setData(uri);
 																		permissions.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

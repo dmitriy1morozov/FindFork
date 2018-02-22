@@ -14,9 +14,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import com.dmitriymorozov.findfork.MainApplication;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
+import com.dmitriymorozov.findfork.util.Constants;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -31,6 +31,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class MapFragment extends Fragment
 		implements OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener,
@@ -54,7 +55,7 @@ public class MapFragment extends Fragment
 
 		private LatLngBounds mVisibleBounds;
 		private OnMapFragmentListener mCallback;
-		private HashMap<String, Marker> mVenues;
+		private Map<String, Marker> mVenues;
 
 		@Override public void onAttach(Context context) {
 				Log.d(TAG, "onAttach: ");
@@ -91,11 +92,7 @@ public class MapFragment extends Fragment
 		@Override public void onActivityCreated(@Nullable Bundle savedInstanceState) {
 				Log.d(TAG, "onActivityCreated: ");
 				super.onActivityCreated(savedInstanceState);
-				try {
-						MapsInitializer.initialize(mParentContext);
-				} catch (Exception e) {
-						Log.d(TAG, "onCreateView: " + e.getMessage());
-				}
+				MapsInitializer.initialize(mParentContext);
 				mMapView.onCreate(savedInstanceState);
 				mMapView.getMapAsync(this);
 		}
@@ -161,7 +158,7 @@ public class MapFragment extends Fragment
 						int indexId = venues.getColumnIndex(DBContract.VENUE_ID);
 						BitmapDescriptor defaultIcon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
 						do{
-								final String id = venues.getString(indexId);
+								String id = venues.getString(indexId);
 								//Don't place a marker if it is already added to the map
 								if(mVenues.containsKey(id)){
 										continue;
@@ -201,29 +198,15 @@ public class MapFragment extends Fragment
 		}
 
 		//==============================================================================================
-		@Override public void onMapReady(final GoogleMap googleMap) {
+		@Override public void onMapReady(GoogleMap googleMap) {
 				Log.d(TAG, "onMapReady: ");
 				mMap = googleMap;
 				mMap.setOnMapLoadedCallback(this);
-
-
-				//LatLngBounds visibleBounds = ((MainApplication) mParentContext.getApplicationContext()).mVisibleArea;
-				//if(visibleBounds != null){
-				//		Log.d(TAG, "onMapReady: visibleBounds = " + visibleBounds.southwest + ";" + visibleBounds.northeast);
-				//		//FIXME use-case. Click back button and exit app. Once app is restarted the following error appears:
-				//		//FIXME ErrorResponse using newLatLngBounds(LatLngBounds, int): Map size can't be 0.
-				//		//FIXME Most likely, layout has not yet occured for the map view.
-				//		//FIXME Either wait until layout has occurred or use newLatLngBounds(LatLngBounds, int, int, int) which allows you to specify the map's dimensions.
-				//		mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(visibleBounds, mMapView.getWidth(),mMapView.getHeight(),0));
-				//}
-				//else{
-				//		mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(MainActivity.LOCATION_DEFAULT, MainActivity.ZOOM_DEFAULT));
-				//}
 		}
 
 		@Override public void onMapLoaded() {
 				Log.d(TAG, "onMapLoaded: ");
-				mMap.setOnCameraIdleListener(MapFragment.this);
+				mMap.setOnCameraIdleListener(this);
 				if(mVisibleBounds != null){
 						moveCamera(mVisibleBounds);
 				}else{
