@@ -110,7 +110,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 		private static final int SERVICE_ERROR_CODE = 0;
 		private static final int EXPAND_REGION_DEFAULT_COEF = 121;
 
-		private boolean isInsertingIntoDatabase;
+		private volatile boolean isInsertingIntoDatabase;
 		private ApiFoursquare mRetrofit;
 		private WeakReference<OnServiceListener> mCallbackRef;
 

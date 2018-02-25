@@ -72,15 +72,19 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				mUnbinder = ButterKnife.bind(this, rootView);
 				mRatingSeekBar.setOnSeekBarChangeListener(this);
 
-				Bundle generalBundle = new Bundle();
-				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
-				getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
 				return rootView;
 		}
 
 		@Override public void onStart() {
 				super.onStart();
 				setDialogWindowSize(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		}
+
+		@Override public void onResume() {
+				super.onResume();
+				Bundle generalBundle = new Bundle();
+				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
+				getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
 		}
 
 		@Override public void onDestroyView() {
@@ -119,7 +123,11 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
-				if(this.isVisible() && !isParseGeneral(data)){
+				if(!this.isVisible()){
+						return;
+				}
+
+				if(!isParseGeneral(data)){
 						parseDetailsAndDisplay(data);
 				}
 		}

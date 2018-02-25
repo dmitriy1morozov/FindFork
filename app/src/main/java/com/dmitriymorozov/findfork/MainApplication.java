@@ -2,8 +2,6 @@ package com.dmitriymorozov.findfork;
 
 import android.app.Application;
 import com.facebook.stetho.Stetho;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 
 public class MainApplication extends Application {
 		@Override public void onCreate() {

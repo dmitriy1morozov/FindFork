@@ -2,8 +2,6 @@ package com.dmitriymorozov.findfork.util;
 
 import android.content.ContentValues;
 import android.support.annotation.NonNull;
-import android.widget.ImageView;
-import android.widget.TextView;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.model.explorePOJO.Venue;

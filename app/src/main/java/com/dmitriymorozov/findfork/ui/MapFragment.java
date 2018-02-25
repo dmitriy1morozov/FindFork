@@ -151,7 +151,6 @@ public class MapFragment extends Fragment
 
 		private void addVenuesMarkersOnMap(Cursor venues) {
 				Log.d(TAG, "addVenuesMarkersOnMap: ");
-				//FIXME processor consuming operation. Put into a separate thread
 				if(venues != null && venues.moveToFirst()){
 						int indexLat = venues.getColumnIndex(DBContract.VENUE_LAT);
 						int indexLng = venues.getColumnIndex(DBContract.VENUE_LNG);

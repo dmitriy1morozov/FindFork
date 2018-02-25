@@ -3,7 +3,6 @@ package com.dmitriymorozov.findfork.model;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
-import com.google.android.gms.maps.model.Marker;
 
 public class Venue implements Comparable<Venue>,Parcelable {
 		private final String mVenueId;

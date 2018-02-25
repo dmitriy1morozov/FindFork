@@ -13,10 +13,8 @@ import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.ListView;
 import com.dmitriymorozov.findfork.R;
-import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.model.Venue;
 import com.dmitriymorozov.findfork.util.Constants;
-import com.dmitriymorozov.findfork.util.Util;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.android.SphericalUtil;
@@ -26,7 +24,7 @@ import java.util.Collections;
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class ListFragment extends android.support.v4.app.ListFragment implements AbsListView.OnScrollListener,
-		ParseCursorAddVenues.OnTaskFinished {
+		ParseCursorVenues.OnTaskFinished {
 		//==============================================================================================
 		private static final String TAG = "MyLogs ListFragment";
 		private static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
@@ -73,6 +71,11 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 				getListView().setOnScrollListener(this);
 		}
 
+		@Override public void onViewCreated(View view, Bundle savedInstanceState) {
+				super.onViewCreated(view, savedInstanceState);
+				view.scrollBy(0,1);
+		}
+
 		@Override public void onSaveInstanceState(Bundle outState) {
 				outState.putParcelable(BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
 				super.onSaveInstanceState(outState);
@@ -99,7 +102,9 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 
 		@Override public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
 				int totalItemCount) {
-				if (view.getLastVisiblePosition() == totalItemCount - 1 && !isLoading) {
+
+				final int lastItem = firstVisibleItem + visibleItemCount;
+				if(!isLoading && lastItem == totalItemCount){
 						isLoading = true;
 						getListView().addFooterView(mFooterLoadingView);
 
@@ -136,51 +141,25 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 
 		public void venuesDownloaded(Cursor cursor){
 				Log.d(TAG, "venuesDataReceived: + mVisibleBounds = " + mVisibleBounds);
-
-				ParseCursorAddVenues parseCursorAddVenues = new ParseCursorAddVenues(this, cursor, mVenues, mVisibleBounds);
-				parseCursorAddVenues.execute();
-
-				//FIXME get rid of cursor parsing in UI thread. Use multithreading
-				//if (cursor != null && cursor.moveToFirst()) {
-				//		int indexId = cursor.getColumnIndex(DBContract.VENUE_ID);
-				//		int indexName = cursor.getColumnIndex(DBContract.VENUE_NAME);
-				//		int indexLat = cursor.getColumnIndex(DBContract.VENUE_LAT);
-				//		int indexLng = cursor.getColumnIndex(DBContract.VENUE_LNG);
-				//		LatLng devicePosition = mVisibleBounds.getCenter();
-				//		do {
-				//				final String venueId = cursor.getString(indexId);
-				//				final String venueName = cursor.getString(indexName);
-				//				Venue venue = new Venue(venueId, venueName);
-				//				if (mVenues.contains(venue)) {
-				//						continue;
-				//				}
-				//
-				//				double latitude = cursor.getDouble(indexLat);
-				//				double longitude = cursor.getDouble(indexLng);
-				//				LatLng venuePosition = new LatLng(latitude, longitude);
-				//				int venueDistance = Util.calculateDistance(devicePosition, venuePosition);
-				//				venue.setDistance(venueDistance);
-				//				mVenues.add(venue);
-				//		} while (cursor.moveToNext());
-				//}
-				//Collections.sort(mVenues);
-				//
-				//mVenueListAdapter.notifyDataSetChanged();
-				////Removing loadingView from footer
-				//if (isLoading) {
-				//		isLoading = false;
-				//		getListView().removeFooterView(mFooterLoadingView);
-				//}
+				ParseCursorVenues parseCursorVenues = new ParseCursorVenues(this, cursor, mVisibleBounds);
+				parseCursorVenues.execute();
 		}
 
-		@Override public void addVenuesAndSortFinished() {
-				mVenueListAdapter.notifyDataSetChanged();
+		@Override public void deliverNewVenues(ArrayList<Venue> newVenues) {
+				Log.d(TAG, "deliverNewVenues: ");
+				newVenues.removeAll(mVenues);
+				if(newVenues.size() != 0){
+						mVenues.addAll(newVenues);
+						Collections.sort(mVenues);
+						mVenueListAdapter.notifyDataSetChanged();
+				}
+
 				//Removing loadingView from footer
-				if (isLoading) {
+				if (isLoading && this.isAdded()) {
 						isLoading = false;
-						if(this.isAdded()){
-								getListView().removeFooterView(mFooterLoadingView);
-						}
+						getListView().removeFooterView(mFooterLoadingView);
+						getListView().scrollBy(0, 1);
+						getListView().scrollBy(0, -1);
 				}
 		}
 }
