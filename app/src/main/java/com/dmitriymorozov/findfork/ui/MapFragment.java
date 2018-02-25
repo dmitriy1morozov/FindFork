@@ -268,9 +268,11 @@ public class MapFragment extends Fragment
 		}
 
 		public void venuesDataReceived(Cursor data){
-				mMap.clear();
 				mVenues.clear();
-				addVenuesMarkersOnMap(data);
-				highlightTopRankedVenues(data);
+				if(mMap != null){
+						mMap.clear();
+						addVenuesMarkersOnMap(data);
+						highlightTopRankedVenues(data);
+				}
 		}
 }

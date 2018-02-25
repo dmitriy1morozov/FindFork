@@ -3,19 +3,16 @@ package com.dmitriymorozov.findfork.ui;
 import android.Manifest;
 import android.app.Service;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.database.ContentObserver;
 import android.database.Cursor;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -24,13 +21,12 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
-import android.widget.Checkable;
-import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.Toast;
@@ -38,10 +34,10 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import com.dmitriymorozov.findfork.R;
-import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.dmitriymorozov.findfork.service.OnServiceListener;
+import com.dmitriymorozov.findfork.util.Constants;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -76,7 +72,6 @@ public class MainActivity extends AppCompatActivity
 		private ListFragment mListFragment;
 
 		private FusedLocationProviderClient mFusedLocationClient;
-		private ContentObserver mContentObserver;
 		private FoursquareService.LocalBinder mBinder;
 		private final ServiceConnection mServiceConnection = new ServiceConnection() {
 				@Override public void onServiceConnected(ComponentName name, IBinder service) {
@@ -116,36 +111,12 @@ public class MainActivity extends AppCompatActivity
 				super.onStart();
 				Intent intent = new Intent(this, FoursquareService.class);
 				bindService(intent, mServiceConnection, Service.BIND_AUTO_CREATE);
-
-				//FixMe use Cursor loader which refreshes its contents automatically. Instead of ContentObserver
-				ContentResolver contentResolver = getContentResolver();
-				mContentObserver = new ContentObserver(new Handler()) {
-						@Override public boolean deliverSelfNotifications() {
-								return super.deliverSelfNotifications();
-						}
-
-						@Override public void onChange(boolean selfChange) {
-								super.onChange(selfChange);
-								Log.d(TAG, "ContentObserver onChange: ");
-								Loader loader = getSupportLoaderManager().getLoader(QueryDb.ID_MAIN);
-								if (loader != null) {
-										loader.forceLoad();
-								}
-						}
-
-						@Override public void onChange(boolean selfChange, Uri uri) {
-								Log.d(TAG, "onChange: ");
-								super.onChange(selfChange, uri);
-						}
-				};
-				contentResolver.registerContentObserver(MyContentProvider.URI_CONTENT_VENUES, true, mContentObserver);
 		}
 
 		@Override protected void onStop() {
 				super.onStop();
 				unbindService(mServiceConnection);
 				mBinder = null;
-				getContentResolver().unregisterContentObserver(mContentObserver);
 		}
 
 		//==============================================================================================
@@ -162,7 +133,8 @@ public class MainActivity extends AppCompatActivity
 		}
 
 		private void deliverVenuesDataToFragment(Cursor data) {
-				Log.d(TAG, "deliverVenuesDataToFragment: ");
+				Log.d(TAG, "deliverVenuesDataToFragment:");
+
 				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("map");
 				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag("list");
 				if (mMapFragment != null && mMapFragment.isVisible()) {
@@ -197,7 +169,7 @@ public class MainActivity extends AppCompatActivity
 				Bundle args = new Bundle();
 				args.putParcelable("bounds", bounds);
 				args.putDouble("minRatingFilter", minRatingFilter);
-				getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
+				getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_MAIN, args, this);
 		}
 
 		@Override public void downloadMoreVenues(LatLngBounds bounds) {
@@ -210,7 +182,7 @@ public class MainActivity extends AppCompatActivity
 				Bundle args = new Bundle();
 				args.putParcelable("bounds", bounds);
 				args.putDouble("minRatingFilter", 0);
-				getSupportLoaderManager().restartLoader(QueryDb.ID_MAIN, args, this);
+				getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_MAIN, args, this);
 		}
 		//==============================================================================================
 
@@ -353,8 +325,6 @@ public class MainActivity extends AppCompatActivity
 		@Override public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 				Log.d(TAG, "onCreateLoader: ");
 
-				Uri uri = MyContentProvider.URI_CONTENT_VENUES;
-
 				double minRatingFilter = args.getDouble("minRatingFilter");
 				LatLngBounds bounds = args.getParcelable("bounds");
 				assert bounds != null;
@@ -363,44 +333,39 @@ public class MainActivity extends AppCompatActivity
 				double west = bounds.southwest.longitude;
 				double east = bounds.northeast.longitude;
 
-				//FixMe Repeated action similar to actions in Service
-				String selectionLng;
-				String selectionLat;
 				List<String> selectionArgsList = new ArrayList<>();
-				String sortOrder = String.format(Locale.US, "%s DESC", DBContract.VENUE_RATING);
-
 				//Latitude selection
-				selectionLat = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LAT,
-						DBContract.VENUE_LAT);
 				selectionArgsList.add(String.valueOf(south));
 				selectionArgsList.add(String.valueOf(north));
 
 				//Longitude selection
+				String selectionLng;
 				if (west < east) {
-						selectionLng = String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LNG,
-								DBContract.VENUE_LNG);
+						selectionLng = SELECTION_LONGITUDE_INSIDE_DEFAULT;
 						selectionArgsList.add(String.valueOf(west));
 						selectionArgsList.add(String.valueOf(east));
 				} else {
-						selectionLng = String.format(Locale.US, "(%s > ? AND %s < ?) OR (%s > ? AND %s < ?)",
-								DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG,
-								DBContract.VENUE_LNG);
+						selectionLng = SELECTION_LONGITUDE_INSIDE_NEAR_180;
 						selectionArgsList.add(String.valueOf(west));
-						selectionArgsList.add(String.valueOf(0));
-						selectionArgsList.add(String.valueOf(0));
+						selectionArgsList.add(String.valueOf(180));
+						selectionArgsList.add(String.valueOf(-180));
 						selectionArgsList.add(String.valueOf(east));
 				}
 
 				//Rating filter selection
-				String selectionRating = String.format(Locale.US, "%s >= ?", DBContract.VENUE_RATING);
 				selectionArgsList.add(String.valueOf(minRatingFilter));
 
 				//Selection concatenation
-				String selection = String.format(Locale.US, "%s AND %s AND %s", selectionLat, selectionLng,
-						selectionRating);
+				String selection = String.format(Locale.US, "%s AND %s AND %s", SELECTION_LATITUDE_INSIDE, selectionLng,
+						SELECTION_RATING_FILTER);
+
 				String[] selectionArgs = new String[selectionArgsList.size()];
 				selectionArgsList.toArray(selectionArgs);
-				return new QueryDb(this, uri, null, selection, selectionArgs, sortOrder);
+
+				CursorLoader cursorLoader = new CursorLoader(this, MyContentProvider.URI_CONTENT_VENUES,
+						null, selection, selectionArgs, SORT_ORDER);
+				cursorLoader.setUpdateThrottle(5000);
+				return cursorLoader;
 		}
 
 		/**

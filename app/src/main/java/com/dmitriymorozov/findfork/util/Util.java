@@ -2,6 +2,8 @@ package com.dmitriymorozov.findfork.util;
 
 import android.content.ContentValues;
 import android.support.annotation.NonNull;
+import android.widget.ImageView;
+import android.widget.TextView;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.model.explorePOJO.Venue;
@@ -12,6 +14,8 @@ import java.util.List;
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class Util {
+
+
 
 		/**
 		 * Calculates distance in meters between two points

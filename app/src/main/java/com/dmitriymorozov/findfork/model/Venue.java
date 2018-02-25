@@ -1,21 +1,18 @@
 package com.dmitriymorozov.findfork.model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import com.google.android.gms.maps.model.Marker;
 
-public class Venue implements Comparable<Venue>{
+public class Venue implements Comparable<Venue>,Parcelable {
 		private final String mVenueId;
 		private final String mName;
-		private Marker mMarker;
 		private int mDistance;
 
 		public Venue(String venueId, String name) {
 				mVenueId = venueId;
 				mName = name;
-		}
-
-		public void setMarker(Marker marker) {
-				mMarker = marker;
 		}
 
 		public void setDistance(int distance) {
@@ -28,10 +25,6 @@ public class Venue implements Comparable<Venue>{
 
 		public String getName() {
 				return mName;
-		}
-
-		public Marker getMarker() {
-				return mMarker;
 		}
 
 		public int getDistance() {
@@ -50,4 +43,30 @@ public class Venue implements Comparable<Venue>{
 				}
 				return super.equals(obj);
 		}
+
+		@Override public int describeContents() {
+				return 0;
+		}
+
+		@Override public void writeToParcel(Parcel dest, int flags) {
+				dest.writeString(this.mVenueId);
+				dest.writeString(this.mName);
+				dest.writeInt(this.mDistance);
+		}
+
+		protected Venue(Parcel in) {
+				this.mVenueId = in.readString();
+				this.mName = in.readString();
+				this.mDistance = in.readInt();
+		}
+
+		public static final Parcelable.Creator<Venue> CREATOR = new Parcelable.Creator<Venue>() {
+				@Override public Venue createFromParcel(Parcel source) {
+						return new Venue(source);
+				}
+
+				@Override public Venue[] newArray(int size) {
+						return new Venue[size];
+				}
+		};
 }

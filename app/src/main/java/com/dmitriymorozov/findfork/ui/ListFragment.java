@@ -25,7 +25,8 @@ import java.util.Collections;
 
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
-public class ListFragment extends android.support.v4.app.ListFragment implements AbsListView.OnScrollListener {
+public class ListFragment extends android.support.v4.app.ListFragment implements AbsListView.OnScrollListener,
+		ParseCursorAddVenues.OnTaskFinished {
 		//==============================================================================================
 		private static final String TAG = "MyLogs ListFragment";
 		private static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
@@ -133,39 +134,53 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 				}
 		}
 
-		public void venuesDownloaded(Cursor data){
-				Log.d(TAG, "venuesDataReceived:");
+		public void venuesDownloaded(Cursor cursor){
+				Log.d(TAG, "venuesDataReceived: + mVisibleBounds = " + mVisibleBounds);
 
-				if (data != null && data.moveToFirst()) {
-						int indexId = data.getColumnIndex(DBContract.VENUE_ID);
-						int indexName = data.getColumnIndex(DBContract.VENUE_NAME);
-						int indexLat = data.getColumnIndex(DBContract.VENUE_LAT);
-						int indexLng = data.getColumnIndex(DBContract.VENUE_LNG);
-						LatLng devicePosition = mVisibleBounds.getCenter();
-						do {
-								final String venueId = data.getString(indexId);
-								final String venueName = data.getString(indexName);
-								Venue venue = new Venue(venueId, venueName);
-								if (mVenues.contains(venue)) {
-										continue;
-								}
+				ParseCursorAddVenues parseCursorAddVenues = new ParseCursorAddVenues(this, cursor, mVenues, mVisibleBounds);
+				parseCursorAddVenues.execute();
 
-								double latitude = data.getDouble(indexLat);
-								double longitude = data.getDouble(indexLng);
-								LatLng venuePosition = new LatLng(latitude, longitude);
-								int venueDistance = Util.calculateDistance(devicePosition, venuePosition);
-								venue.setDistance(venueDistance);
-								mVenues.add(venue);
-						} while (data.moveToNext());
-				}
+				//FIXME get rid of cursor parsing in UI thread. Use multithreading
+				//if (cursor != null && cursor.moveToFirst()) {
+				//		int indexId = cursor.getColumnIndex(DBContract.VENUE_ID);
+				//		int indexName = cursor.getColumnIndex(DBContract.VENUE_NAME);
+				//		int indexLat = cursor.getColumnIndex(DBContract.VENUE_LAT);
+				//		int indexLng = cursor.getColumnIndex(DBContract.VENUE_LNG);
+				//		LatLng devicePosition = mVisibleBounds.getCenter();
+				//		do {
+				//				final String venueId = cursor.getString(indexId);
+				//				final String venueName = cursor.getString(indexName);
+				//				Venue venue = new Venue(venueId, venueName);
+				//				if (mVenues.contains(venue)) {
+				//						continue;
+				//				}
+				//
+				//				double latitude = cursor.getDouble(indexLat);
+				//				double longitude = cursor.getDouble(indexLng);
+				//				LatLng venuePosition = new LatLng(latitude, longitude);
+				//				int venueDistance = Util.calculateDistance(devicePosition, venuePosition);
+				//				venue.setDistance(venueDistance);
+				//				mVenues.add(venue);
+				//		} while (cursor.moveToNext());
+				//}
+				//Collections.sort(mVenues);
+				//
+				//mVenueListAdapter.notifyDataSetChanged();
+				////Removing loadingView from footer
+				//if (isLoading) {
+				//		isLoading = false;
+				//		getListView().removeFooterView(mFooterLoadingView);
+				//}
+		}
 
-				Collections.sort(mVenues);
-
+		@Override public void addVenuesAndSortFinished() {
 				mVenueListAdapter.notifyDataSetChanged();
 				//Removing loadingView from footer
 				if (isLoading) {
 						isLoading = false;
-						getListView().removeFooterView(mFooterLoadingView);
+						if(this.isAdded()){
+								getListView().removeFooterView(mFooterLoadingView);
+						}
 				}
 		}
 }

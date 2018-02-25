@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.text.TextUtils;
@@ -30,6 +31,7 @@ import butterknife.Unbinder;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
+import com.dmitriymorozov.findfork.util.Constants;
 import java.util.Locale;
 
 public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBarChangeListener,
@@ -72,7 +74,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 				Bundle generalBundle = new Bundle();
 				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
-				getActivity().getSupportLoaderManager().restartLoader(QueryDb.ID_VENUE_GENERAL, generalBundle, this);
+				getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
 				return rootView;
 		}
 
@@ -111,11 +113,13 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 				String[] selectionArgs = { mVenueId };
 
-				return new QueryDb(getActivity(), contentUri, null, selection, selectionArgs, null);
+				CursorLoader cursorLoader = new CursorLoader(getActivity(), contentUri, null, selection, selectionArgs, null);
+				cursorLoader.setUpdateThrottle(1000);
+				return cursorLoader;
 		}
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
-				if(!isParseGeneral(data)){
+				if(this.isVisible() && !isParseGeneral(data)){
 						parseDetailsAndDisplay(data);
 				}
 		}
@@ -206,7 +210,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 						Bundle detailsBundle = new Bundle();
 						detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
-						getActivity().getSupportLoaderManager().restartLoader(QueryDb.ID_VENUE_DETAILS, detailsBundle, this);
+						getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_DETAILS, detailsBundle, this);
 						return true;
 				}
 				return false;

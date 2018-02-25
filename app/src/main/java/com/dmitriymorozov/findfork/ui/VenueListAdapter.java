@@ -33,15 +33,23 @@ public class VenueListAdapter extends BaseAdapter {
 		}
 
 		@Override public View getView(int position, View convertView, ViewGroup parent) {
-				View view = convertView;
-				if(view == null){
-						view = mLayoutInflater.inflate(R.layout.item_list, parent, false);
+				ViewHolderDetails viewHolderDetails;
+
+				if(convertView == null){
+						convertView = mLayoutInflater.inflate(R.layout.item_list, null);
+						TextView id = convertView.findViewById(R.id.text_item_id);
+						TextView name = convertView.findViewById(R.id.text_item_name);
+						TextView distance = convertView.findViewById(R.id.text_item_distance);
+						viewHolderDetails = new ViewHolderDetails(id, name, distance);
+						convertView.setTag(viewHolderDetails);
+				} else{
+						viewHolderDetails = (ViewHolderDetails) convertView.getTag();
 				}
 
 				Venue venue = mVenues.get(position);
-				((TextView)view.findViewById(R.id.text_item_id)).setText(venue.getVenueId());
-				((TextView)view.findViewById(R.id.text_item_name)).setText(venue.getName());
-				((TextView)view.findViewById(R.id.text_item_distance)).setText(String.valueOf(venue.getDistance()));
-				return view;
+				viewHolderDetails.setId(venue.getVenueId());
+				viewHolderDetails.setName(venue.getName());
+				viewHolderDetails.setDistance(String.valueOf(venue.getDistance()));
+				return convertView;
 		}
 }
