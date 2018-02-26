@@ -161,7 +161,6 @@ public class MainActivity extends AppCompatActivity
 		//==============================================================================================
 		@Override public void onMapChanged(LatLngBounds bounds, double minRatingFilter) {
 				if (mBinder != null) {
-						mBinder.removeOutsideVenuesFromLocalDb(bounds);
 						mBinder.downloadVenuesByRectangleFromApi(bounds);
 						mLoadingProgress.setVisibility(View.VISIBLE);
 				}
@@ -174,7 +173,6 @@ public class MainActivity extends AppCompatActivity
 
 		@Override public void downloadMoreVenues(LatLngBounds bounds) {
 				if (mBinder != null && mLoadingProgress.getVisibility() == View.GONE) {
-						mBinder.removeOutsideVenuesFromLocalDb(bounds);
 						mBinder.downloadVenuesByRectangleFromApi(bounds);
 						mLoadingProgress.setVisibility(View.VISIBLE);
 				}
