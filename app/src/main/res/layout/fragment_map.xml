@@ -57,7 +57,7 @@
 				android:layout_margin="8dp"
 				android:max="100"
 				android:progress="100"
-				android:rotation="180"
+				android:rotationY="180"
 				android:thumb="@android:drawable/star_on"
 				/>
 

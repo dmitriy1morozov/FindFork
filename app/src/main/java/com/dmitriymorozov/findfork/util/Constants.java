@@ -7,6 +7,12 @@ import java.util.Locale;
 
 public final class Constants {
 
+		public static final String PREF_ONBOARDING = "onboardingSharedPreferences";
+		public static final String PREF_ATTR_ONBOARDING_MAIN_FINISHED = "onboardingMainFinished";
+		public static final String PREF_ATTR_ONBOARDING_MAP_FINISHED = "onboardingMapFinished";
+		public static final String PREF_ATTR_ONBOARDING_LIST_FINISHED = "onboardingListFinished";
+		public static final String PREF_ATTR_ONBOARDING_DETAILS_FINISHED = "onboardingDetailsFinished";
+
 		public static final LatLngBounds DEFAULT_VISIBLE_BOUNDS = new LatLngBounds(
 				new LatLng(50.454295, 30.506042),
 				new LatLng(50.470509, 30.529000));

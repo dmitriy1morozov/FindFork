@@ -13,8 +13,6 @@ import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class Util {
 
-
-
 		/**
 		 * Calculates distance in meters between two points
 		 */

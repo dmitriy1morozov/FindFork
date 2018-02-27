@@ -2,11 +2,15 @@ package com.dmitriymorozov.findfork.ui;
 
 import android.app.Dialog;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.LoaderManager;
@@ -15,12 +19,14 @@ import android.support.v4.content.Loader;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,7 +38,16 @@ import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.util.Constants;
+import com.google.gson.internal.LinkedTreeMap;
+import com.popalay.tutors.TutorialListener;
+import com.popalay.tutors.Tutors;
+import com.popalay.tutors.TutorsBuilder;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
+
+import static android.content.Context.MODE_PRIVATE;
+import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBarChangeListener,
 		LoaderManager.LoaderCallbacks<Cursor> {
@@ -41,7 +56,9 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		@BindView(R.id.text_details_name) TextView mNameTextView;
 		@BindView(R.id.text_details_address) TextView mAddressTextView;
+		@BindView(R.id.image_details_phone) ImageView mPhoneImageView;
 		@BindView(R.id.text_details_phone) TextView mPhoneTextView;
+		@BindView(R.id.image_details_site) ImageView mSiteImageView;
 		@BindView(R.id.text_details_site) TextView mSiteTextView;
 		@BindView(R.id.text_details_price) TextView mPriceTextView;
 		@BindView(R.id.text_details_price_description) TextView mPriceDescriptionTextView;
@@ -63,21 +80,10 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				if(savedInstanceState != null){
 						mVenueId = savedInstanceState.getString(VENUE_ID_KEY);
 				}
-
-				Window dialogWindow = getDialog().getWindow();
-				if (dialogWindow != null) {
-						dialogWindow.requestFeature(Window.FEATURE_NO_TITLE);
-				}
 				View rootView = inflater.inflate(R.layout.fragment_details, container, false);
 				mUnbinder = ButterKnife.bind(this, rootView);
 				mRatingSeekBar.setOnSeekBarChangeListener(this);
-
 				return rootView;
-		}
-
-		@Override public void onStart() {
-				super.onStart();
-				setDialogWindowSize(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 		}
 
 		@Override public void onResume() {
@@ -85,6 +91,29 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				Bundle generalBundle = new Bundle();
 				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
 				getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
+		}
+
+		@NonNull @Override public Dialog onCreateDialog(Bundle savedInstanceState) {
+				Dialog dialogDetails = super.onCreateDialog(savedInstanceState);
+				dialogDetails.requestWindowFeature(Window.FEATURE_ACTION_BAR);
+				final Window dialogWindow = dialogDetails.getWindow();
+				dialogDetails.setOnShowListener(new DialogInterface.OnShowListener() {
+						@Override public void onShow(DialogInterface dialog) {
+								if(dialogWindow != null){
+										dialogWindow.setGravity(Gravity.TOP);
+										dialogWindow.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+								}
+								if(!isDetailsOnboardingFinished()){
+										Handler handler = new Handler();
+										handler.postDelayed(new Runnable() {
+												@Override public void run() {
+														startDetailsOnboarding();
+												}
+										}, 500);
+								}
+						}
+				});
+				return dialogDetails;
 		}
 
 		@Override public void onDestroyView() {
@@ -185,13 +214,64 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 
 		//==============================================================================================
-		private void setDialogWindowSize(int width, int height) {
-				Dialog dialog = getDialog();
-				if(dialog != null){
-						Window dialogWindow = dialog.getWindow();
-						if(dialogWindow != null){
-								dialogWindow.setLayout(width, height);
+		private boolean isDetailsOnboardingFinished() {
+				SharedPreferences pref = getActivity().getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				return pref.getBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, false);
+		}
+
+		private void finishDetailsOnboarding() {
+				SharedPreferences pref = getActivity().getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				SharedPreferences.Editor editor = pref.edit();
+				editor.putBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, true);
+				editor.apply();
+		}
+
+		private void startDetailsOnboarding(){
+				final Map<String, View> tutorials = new LinkedTreeMap<>();
+				tutorials.put(getString(R.string.onboarding_details_name), mNameTextView);
+				tutorials.put(getString(R.string.onboarding_details_address), mAddressTextView);
+				tutorials.put(getString(R.string.onboarding_details_phone), mPhoneImageView);
+				tutorials.put(getString(R.string.onboarding_details_site), mSiteImageView);
+				tutorials.put(getString(R.string.onboarding_details_price), mPriceDescriptionTextView);
+				tutorials.put(getString(R.string.onboarding_details_rating), mRatingSeekBar);
+				tutorials.put(getString(R.string.onboarding_details_rating_submitter_name), mRatingSubmitterEditText);
+				tutorials.put(getString(R.string.onboarding_details_rating_submit), mSubmitButton);
+				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
+
+				final Tutors tutors = new TutorsBuilder()
+						.textColorRes(android.R.color.white)
+						.shadowColorRes(R.color.shadow)
+						.textSizeRes(R.dimen.textNormal)
+						.spacingRes(R.dimen.spacingNormal)
+						.lineWidthRes(R.dimen.lineWidth)
+						.cancelable(false)
+						.build();
+
+				tutors.setListener(new TutorialListener() {
+						@Override public void onNext() {
+								showTutorial(tutors, iterator);
 						}
+
+						@Override public void onComplete() {
+								tutors.close();
+								finishDetailsOnboarding();
+						}
+
+						@Override public void onCompleteAll() {
+								tutors.close();
+								finishDetailsOnboarding();
+						}
+				});
+
+				showTutorial(tutors, iterator);
+		}
+		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
+				if (iterator == null) {
+						return;
+				}
+				if (iterator.hasNext()) {
+						Map.Entry<String, View> next = iterator.next();
+						tutors.show(getActivity().getSupportFragmentManager(),  next.getValue(), next.getKey(), !iterator.hasNext());
 				}
 		}
 

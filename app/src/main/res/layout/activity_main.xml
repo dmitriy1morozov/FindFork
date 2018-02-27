@@ -7,7 +7,7 @@
     tools:context="com.dmitriymorozov.findfork.ui.MainActivity">
 
 
-    <ImageButton
+    <Button
         android:id="@+id/btn_main_device_location"
         android:layout_width="32dp"
         android:layout_height="32dp"
@@ -17,7 +17,6 @@
         app:layout_constraintTop_toTopOf="@id/frame_main_place_autocomplete"
         app:layout_constraintBottom_toBottomOf="@id/frame_main_place_autocomplete"
         android:background="@android:drawable/ic_menu_mylocation"
-        android:backgroundTint="@android:color/black"
         />
     <FrameLayout
         android:id="@+id/frame_main_place_autocomplete"

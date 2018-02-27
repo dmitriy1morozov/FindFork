@@ -1,6 +1,7 @@
 package com.dmitriymorozov.findfork.ui;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -29,9 +30,17 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
+import com.google.gson.internal.LinkedTreeMap;
+import com.popalay.tutors.TutorialListener;
+import com.popalay.tutors.Tutors;
+import com.popalay.tutors.TutorsBuilder;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+
+import static android.content.Context.MODE_PRIVATE;
+import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class MapFragment extends Fragment
 		implements OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener,
@@ -142,6 +151,61 @@ public class MapFragment extends Fragment
 		}
 
 		//==============================================================================================
+		private boolean isMapOnboardingFinished() {
+				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				return pref.getBoolean(PREF_ATTR_ONBOARDING_MAP_FINISHED, false);
+		}
+
+		private void finishMapOnboarding() {
+				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				SharedPreferences.Editor editor = pref.edit();
+				editor.putBoolean(PREF_ATTR_ONBOARDING_MAP_FINISHED, true);
+				editor.apply();
+		}
+
+		private void startMapOnboarding(){
+				final Map<String, View> tutorials = new LinkedTreeMap<>();
+				tutorials.put(getString(R.string.onboarding_map_rating_filter), mRatingFilterTextView);
+				tutorials.put(getString(R.string.onboarding_map_googlemap), mMapView);
+				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
+
+				final Tutors tutors = new TutorsBuilder()
+						.textColorRes(android.R.color.white)
+						.shadowColorRes(R.color.shadow)
+						.textSizeRes(R.dimen.textNormal)
+						.spacingRes(R.dimen.spacingNormal)
+						.lineWidthRes(R.dimen.lineWidth)
+						.cancelable(false)
+						.build();
+
+				tutors.setListener(new TutorialListener() {
+						@Override public void onNext() {
+								showTutorial(tutors, iterator);
+						}
+
+						@Override public void onComplete() {
+								finishMapOnboarding();
+								tutors.close();
+						}
+
+						@Override public void onCompleteAll() {
+								finishMapOnboarding();
+								tutors.close();
+						}
+				});
+
+				showTutorial(tutors, iterator);
+		}
+		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
+				if (iterator == null) {
+						return;
+				}
+				if (iterator.hasNext()) {
+						Map.Entry<String, View> next = iterator.next();
+						tutors.show(getChildFragmentManager(), next.getValue(), next.getKey(), !iterator.hasNext());
+				}
+		}
+
 		private void handleVisibleRectangle(){
 				Log.d(TAG, "handleVisibleRectangle: ");
 				VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
@@ -175,6 +239,11 @@ public class MapFragment extends Fragment
 								mVenues.put(id, marker);
 								mMap.setOnMarkerClickListener(this);
 						}while(venues.moveToNext());
+
+						//Enter point for onboarding procedure. It starts when the map is filled with markers
+						if(!isMapOnboardingFinished()){
+								startMapOnboarding();
+						}
 				}
 		}
 		private void highlightTopRankedVenues(Cursor venues) {

@@ -49,6 +49,9 @@ dependencies {
   implementation squareup.converterGson
   //Annotations for Java SE5
   implementation annotation.annotation
+  //OnBoarding library
+  implementation popalay.tutors
+
   //Stetho
   implementation facebook.stetho
 }

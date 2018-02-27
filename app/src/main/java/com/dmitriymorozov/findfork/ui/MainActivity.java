@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Location;
@@ -26,8 +27,8 @@ import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import butterknife.BindView;
@@ -48,10 +49,16 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.gson.internal.LinkedTreeMap;
 import com.google.maps.android.SphericalUtil;
+import com.popalay.tutors.TutorialListener;
+import com.popalay.tutors.Tutors;
+import com.popalay.tutors.TutorsBuilder;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
@@ -63,15 +70,15 @@ public class MainActivity extends AppCompatActivity
 		private static final boolean TOGGLE_MAP = true;
 		private static final boolean TOGGLE_LIST = false;
 
+		@BindView(R.id.btn_main_device_location) Button mDeviceLocationButton;
 		@BindView(R.id.btn_main_toggle_mode) CheckBox mToggleMode;
-		@BindView(R.id.btn_main_device_location) ImageButton mDeviceLocationButton;
 		@BindView(R.id.progress_main_downloading) ProgressBar mLoadingProgress;
+		private FusedLocationProviderClient mFusedLocationClient;
 		private PlaceAutocompleteFragment mAutocompleteFragment;
 
 		private MapFragment mMapFragment;
 		private ListFragment mListFragment;
 
-		private FusedLocationProviderClient mFusedLocationClient;
 		private FoursquareService.LocalBinder mBinder;
 		private final ServiceConnection mServiceConnection = new ServiceConnection() {
 				@Override public void onServiceConnected(ComponentName name, IBinder service) {
@@ -92,7 +99,7 @@ public class MainActivity extends AppCompatActivity
 				ButterKnife.bind(this);
 
 				mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-				if (savedInstanceState == null) {
+				if(isMainOnboardingFinished() && savedInstanceState == null){
 						Log.d(TAG, "onCreate: Initial State");
 						mToggleMode.setChecked(TOGGLE_MAP);
 						mMapFragment = new MapFragment();
@@ -113,6 +120,13 @@ public class MainActivity extends AppCompatActivity
 				bindService(intent, mServiceConnection, Service.BIND_AUTO_CREATE);
 		}
 
+		@Override public void onWindowFocusChanged(boolean hasFocus) {
+				super.onWindowFocusChanged(hasFocus);
+				if(hasFocus && !isMainOnboardingFinished()){
+						startMainOnboarding();
+				}
+		}
+
 		@Override protected void onStop() {
 				super.onStop();
 				unbindService(mServiceConnection);
@@ -120,6 +134,72 @@ public class MainActivity extends AppCompatActivity
 		}
 
 		//==============================================================================================
+		/**
+		 * Check if the MainActivity onboarding finished
+		 */
+		private boolean isMainOnboardingFinished() {
+				SharedPreferences pref = getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				return pref.getBoolean(PREF_ATTR_ONBOARDING_MAIN_FINISHED, false);
+		}
+
+		/**
+		 * Write to shared pref that MainActivity onboarding finished
+		 */
+		private void finishMainOnboarding() {
+				SharedPreferences pref = getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				SharedPreferences.Editor editor = pref.edit();
+				editor.putBoolean(PREF_ATTR_ONBOARDING_MAIN_FINISHED, true);
+				editor.apply();
+
+				mToggleMode.setChecked(TOGGLE_MAP);
+				mMapFragment = new MapFragment();
+				getSupportFragmentManager().beginTransaction()
+						.add(R.id.frame_main_container, mMapFragment, "map")
+						.commit();
+		}
+
+		private void startMainOnboarding(){
+				final Map<String, View> tutorials = new LinkedTreeMap<>();
+				tutorials.put(getString(R.string.onboarding_main_gps), mDeviceLocationButton);
+				tutorials.put(getString(R.string.onboarding_main_search), findViewById(R.id.frame_main_place_autocomplete));
+				tutorials.put(getString(R.string.onboarding_main_toggle), mToggleMode);
+				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
+
+				final Tutors tutors = new TutorsBuilder()
+						.textColorRes(android.R.color.white)
+						.shadowColorRes(R.color.shadow)
+						.textSizeRes(R.dimen.textNormal)
+						.spacingRes(R.dimen.spacingNormal)
+						.lineWidthRes(R.dimen.lineWidth)
+						.cancelable(false)
+						.build();
+				showTutorial(tutors, iterator);
+				tutors.setListener(new TutorialListener() {
+						@Override public void onNext() {
+								showTutorial(tutors, iterator);
+						}
+
+						@Override public void onComplete() {
+								tutors.close();
+								finishMainOnboarding();
+						}
+
+						@Override public void onCompleteAll() {
+								tutors.close();
+								finishMainOnboarding();
+						}
+				});
+		}
+		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
+				if (iterator == null) {
+						return;
+				}
+				if (iterator.hasNext()) {
+						Map.Entry<String, View> next = iterator.next();
+						tutors.show(getSupportFragmentManager(), next.getValue(), next.getKey(), !iterator.hasNext());
+				}
+		}
+
 		private void updateLocationInFragment(LatLngBounds visibleBounds) {
 				Log.d(TAG, "updateLocationInFragment: ");
 				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("map");
@@ -157,7 +237,6 @@ public class MainActivity extends AppCompatActivity
 				Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
 				startActivity(myIntent);
 		}
-
 		//==============================================================================================
 		@Override public void onMapChanged(LatLngBounds bounds, double minRatingFilter) {
 				if (mBinder != null) {
@@ -183,7 +262,6 @@ public class MainActivity extends AppCompatActivity
 				getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_MAIN, args, this);
 		}
 		//==============================================================================================
-
 		/**
 		 * device_location button onClickListener
 		 */
@@ -195,8 +273,7 @@ public class MainActivity extends AppCompatActivity
 				LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 				if (locationManager != null && !locationManager.isProviderEnabled(
 						LocationManager.GPS_PROVIDER) && hasGpsDevice(this)) {
-						Toast.makeText(this, "Please enable GPS to locate your position",
-								Toast.LENGTH_SHORT).show();
+						Toast.makeText(this, "Please enable GPS to locate your position", Toast.LENGTH_SHORT).show();
 						enableGps();
 				}
 
@@ -209,8 +286,7 @@ public class MainActivity extends AppCompatActivity
 						&& hasFineLocationPermissions != PackageManager.PERMISSION_GRANTED) {
 
 						String requestString[] = { Manifest.permission.ACCESS_FINE_LOCATION };
-						ActivityCompat.requestPermissions(this, requestString,
-								RC_LOCATION_PERMISSIONS);
+						ActivityCompat.requestPermissions(this, requestString, RC_LOCATION_PERMISSIONS);
 				} else {
 						mFusedLocationClient.getLastLocation().addOnCompleteListener(this, this);
 				}
