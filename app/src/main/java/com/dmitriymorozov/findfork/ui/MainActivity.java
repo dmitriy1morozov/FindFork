@@ -27,8 +27,8 @@ import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import butterknife.BindView;
@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity
 		private static final boolean TOGGLE_MAP = true;
 		private static final boolean TOGGLE_LIST = false;
 
-		@BindView(R.id.btn_main_device_location) Button mDeviceLocationButton;
+		@BindView(R.id.btn_main_device_location) ImageView mDeviceLocationImageView;
 		@BindView(R.id.btn_main_toggle_mode) CheckBox mToggleMode;
 		@BindView(R.id.progress_main_downloading) ProgressBar mLoadingProgress;
 		private FusedLocationProviderClient mFusedLocationClient;
@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity
 						getSupportFragmentManager().beginTransaction()
 								.add(R.id.frame_main_container, mMapFragment, "map")
 								.commit();
-						mDeviceLocationButton.callOnClick();
+						mDeviceLocationImageView.callOnClick();
 				}
 
 				mAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(
@@ -160,7 +160,7 @@ public class MainActivity extends AppCompatActivity
 
 		private void startMainOnboarding(){
 				final Map<String, View> tutorials = new LinkedTreeMap<>();
-				tutorials.put(getString(R.string.onboarding_main_gps), mDeviceLocationButton);
+				tutorials.put(getString(R.string.onboarding_main_gps), mDeviceLocationImageView);
 				tutorials.put(getString(R.string.onboarding_main_search), findViewById(R.id.frame_main_place_autocomplete));
 				tutorials.put(getString(R.string.onboarding_main_toggle), mToggleMode);
 				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
@@ -480,11 +480,11 @@ public class MainActivity extends AppCompatActivity
 								}
 								if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 										Log.d(TAG, "onRequestPermissionsResult: GRANTED");
-										mDeviceLocationButton.callOnClick();
+										mDeviceLocationImageView.callOnClick();
 								} else {
 										if (!shouldShowRequestPermissionRationale(
 												Manifest.permission.ACCESS_FINE_LOCATION)) {
-												Snackbar.make(mDeviceLocationButton,
+												Snackbar.make(mDeviceLocationImageView,
 														"Location permissions denied permanently", Snackbar.LENGTH_LONG)
 														.setAction("Grant", new View.OnClickListener() {
 																@Override public void onClick(View v) {

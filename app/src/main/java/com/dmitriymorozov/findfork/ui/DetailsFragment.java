@@ -66,8 +66,8 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		@BindView(R.id.text_details_rating_value) TextView mRatingTextView;
 		@BindView(R.id.text_details_rating_submitter) EditText mRatingSubmitterEditText;
 		@BindView(R.id.button_details_submit) Button mSubmitButton;
-		private Unbinder mUnbinder;
 
+		private Unbinder mUnbinder;
 		private String mVenueId;
 
 		public void setVenueId(String mVenueId) {
@@ -94,16 +94,16 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 
 		@NonNull @Override public Dialog onCreateDialog(Bundle savedInstanceState) {
-				Dialog dialogDetails = super.onCreateDialog(savedInstanceState);
-				dialogDetails.requestWindowFeature(Window.FEATURE_ACTION_BAR);
-				final Window dialogWindow = dialogDetails.getWindow();
+				final Dialog dialogDetails = super.onCreateDialog(savedInstanceState);
+				dialogDetails.requestWindowFeature(Window.FEATURE_NO_TITLE);
 				dialogDetails.setOnShowListener(new DialogInterface.OnShowListener() {
 						@Override public void onShow(DialogInterface dialog) {
+								Window dialogWindow =  dialogDetails.getWindow();
 								if(dialogWindow != null){
 										dialogWindow.setGravity(Gravity.TOP);
 										dialogWindow.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 								}
-								if(!isDetailsOnboardingFinished()){
+								if(!isOnboardingFinished()){
 										Handler handler = new Handler();
 										handler.postDelayed(new Runnable() {
 												@Override public void run() {
@@ -214,7 +214,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 
 		//==============================================================================================
-		private boolean isDetailsOnboardingFinished() {
+		private boolean isOnboardingFinished() {
 				SharedPreferences pref = getActivity().getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				return pref.getBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, false);
 		}
@@ -242,7 +242,6 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 						.textColorRes(android.R.color.white)
 						.shadowColorRes(R.color.shadow)
 						.textSizeRes(R.dimen.textNormal)
-						.spacingRes(R.dimen.spacingNormal)
 						.lineWidthRes(R.dimen.lineWidth)
 						.cancelable(false)
 						.build();
