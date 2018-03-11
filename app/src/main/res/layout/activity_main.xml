@@ -16,6 +16,7 @@
         app:layout_constraintRight_toLeftOf="@+id/frame_main_place_autocomplete"
         app:layout_constraintTop_toTopOf="@id/frame_main_place_autocomplete"
         app:layout_constraintBottom_toBottomOf="@id/frame_main_place_autocomplete"
+        android:clickable="true"
         android:background="@drawable/main_gps"
         />
     <FrameLayout

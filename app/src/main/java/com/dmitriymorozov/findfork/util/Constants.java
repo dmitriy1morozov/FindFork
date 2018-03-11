@@ -1,6 +1,8 @@
 package com.dmitriymorozov.findfork.util;
 
 import com.dmitriymorozov.findfork.database.DBContract;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import java.util.Locale;
@@ -51,4 +53,8 @@ public final class Constants {
 		public static final String SELECTION_LONGITUDE_OUTSIDE_NEAR_180 =
 				String.format(Locale.US, "(%s > ? AND %s < ?) OR (%s > ? AND %s < ?)",
 						DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG, DBContract.VENUE_LNG);
+
+		public static final BitmapDescriptor MARKER_DEFAULT = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
+		public static final BitmapDescriptor MARKER_BEST_RATING = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN);
+		public static final BitmapDescriptor MARKER_SELECTED_VENUE = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE);
 }

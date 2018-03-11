@@ -39,6 +39,7 @@ import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.dmitriymorozov.findfork.service.OnServiceListener;
 import com.dmitriymorozov.findfork.util.Constants;
+import com.dmitriymorozov.findfork.util.Util;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -63,8 +64,12 @@ import java.util.Map;
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class MainActivity extends AppCompatActivity
-		implements PlaceSelectionListener, OnCompleteListener<Location>, OnServiceListener,
-		LoaderManager.LoaderCallbacks<Cursor>, MapFragment.OnMapFragmentListener, OnLoadMoreListener {
+		implements OnServiceListener,
+		LoaderManager.LoaderCallbacks<Cursor>,
+		PlaceSelectionListener, OnCompleteListener<Location>,
+		MapFragment.OnMapFragmentListener,
+		OnLoadMoreListener,
+		DetailsFragment.OnDetailsFragmentListener{
 		private static final String TAG = "MyLogs MainActivity";
 		private static final int RC_LOCATION_PERMISSIONS = 1;
 		private static final boolean TOGGLE_MAP = true;
@@ -200,15 +205,13 @@ public class MainActivity extends AppCompatActivity
 				}
 		}
 
-		private void updateLocationInFragment(LatLngBounds visibleBounds) {
-				Log.d(TAG, "updateLocationInFragment: ");
-				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("map");
-				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag("list");
-				if (mMapFragment != null && mMapFragment.isVisible()) {
+		private void updatePosition(LatLngBounds visibleBounds) {
+				Log.d(TAG, "updatePosition:");
+				if(mToggleMode.isChecked() == TOGGLE_LIST){
+						mToggleMode.performClick();
+						mMapFragment.setVisibleBounds(visibleBounds);
+				}else{
 						mMapFragment.moveCamera(visibleBounds);
-				}
-				if (mListFragment != null && mListFragment.isVisible()) {
-						mListFragment.setVisibleBounds(visibleBounds);
 				}
 		}
 
@@ -308,6 +311,7 @@ public class MainActivity extends AppCompatActivity
 						}
 
 						if (mListFragment == null) {
+								Log.d(TAG, "onToggleMode: new ListFragment");
 								mListFragment = new ListFragment();
 						}
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, "list");
@@ -321,6 +325,7 @@ public class MainActivity extends AppCompatActivity
 						}
 
 						if (mMapFragment == null) {
+								Log.d(TAG, "onToggleMode: new MapFragment");
 								mMapFragment = new MapFragment();
 						}
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, "map");
@@ -330,7 +335,6 @@ public class MainActivity extends AppCompatActivity
 		}
 
 		//----------------------------------------------------------------------------------------------
-
 		/**
 		 * Device location callback. Using GPS sensor
 		 *
@@ -350,7 +354,7 @@ public class MainActivity extends AppCompatActivity
 				LatLng sountWest = SphericalUtil.computeOffset(deviceLatLng, 200, SOUTH_WEST_DEGREES);
 				LatLng northEast = SphericalUtil.computeOffset(deviceLatLng, 200, NORTH_EAST_DEGREES);
 				LatLngBounds visibleBounds = new LatLngBounds(sountWest, northEast);
-				updateLocationInFragment(visibleBounds);
+				updatePosition(visibleBounds);
 		}
 
 		/**
@@ -360,7 +364,7 @@ public class MainActivity extends AppCompatActivity
 		 */
 		@Override public void onPlaceSelected(Place place) {
 				LatLngBounds visibleBounds = place.getViewport();
-				updateLocationInFragment(visibleBounds);
+				updatePosition(visibleBounds);
 		}
 
 		/**
@@ -505,5 +509,17 @@ public class MainActivity extends AppCompatActivity
 								super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 								break;
 				}
+		}
+
+		@Override protected void onResume() {
+				super.onResume();
+		}
+
+		@Override public void onVenueSelected(String venueId, LatLng position) {
+				Log.d(TAG, "onVenueSelected: ");
+
+				LatLngBounds bounds = Util.toBounds(position, 500);
+				updatePosition(bounds);
+				//mMapFragment.highlightSelectedVenue(venueId);
 		}
 }

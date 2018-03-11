@@ -2,6 +2,7 @@ package com.dmitriymorozov.findfork.ui;
 
 import android.app.Dialog;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,6 +14,7 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -38,6 +40,7 @@ import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.util.Constants;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.internal.LinkedTreeMap;
 import com.popalay.tutors.TutorialListener;
 import com.popalay.tutors.Tutors;
@@ -51,6 +54,11 @@ import static com.dmitriymorozov.findfork.util.Constants.*;
 
 public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBarChangeListener,
 		LoaderManager.LoaderCallbacks<Cursor> {
+
+		public interface OnDetailsFragmentListener {
+				void onVenueSelected(String venueId, LatLng position);
+		}
+
 		private static final String TAG = "MyLogs DetailsFragment";
 		private static final String VENUE_ID_KEY = "venueId";
 
@@ -67,11 +75,25 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		@BindView(R.id.text_details_rating_submitter) EditText mRatingSubmitterEditText;
 		@BindView(R.id.button_details_submit) Button mSubmitButton;
 
+		private Context mParentContext;
+		private OnDetailsFragmentListener mCallback;
 		private Unbinder mUnbinder;
 		private String mVenueId;
 
 		public void setVenueId(String mVenueId) {
 				this.mVenueId = mVenueId;
+		}
+
+		@Override public void onAttach(Context context) {
+				Log.d(TAG, "onAttach: ");
+				super.onAttach(context);
+				mParentContext = context;
+				if (context instanceof OnDetailsFragmentListener) {
+						Log.d(TAG, "onAttach: DetailsFragment attached successfully");
+						mCallback = (OnDetailsFragmentListener) context;
+				} else {
+						Log.d(TAG, "onAttach() failed: " + "parent context is not an instance of OnDetailsFragmentListener interface");
+				}
 		}
 
 		@Nullable @Override
@@ -90,7 +112,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				super.onResume();
 				Bundle generalBundle = new Bundle();
 				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
-				getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
+				((FragmentActivity)mParentContext).getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
 		}
 
 		@NonNull @Override public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -146,7 +168,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 				String[] selectionArgs = { mVenueId };
 
-				CursorLoader cursorLoader = new CursorLoader(getActivity(), contentUri, null, selection, selectionArgs, null);
+				CursorLoader cursorLoader = new CursorLoader(mParentContext, contentUri, null, selection, selectionArgs, null);
 				cursorLoader.setUpdateThrottle(1000);
 				return cursorLoader;
 		}
@@ -165,6 +187,14 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 
 		//==============================================================================================
+		@OnClick({R.id.text_details_address, R.id.image_details_address}) void onAddressClick(){
+				//TODO remove Gogi venue заглушка
+				this.dismiss();
+				LatLng position = new LatLng(50.44042962770835, 30.510291681163462);
+				String id = "55c33219498e99157ff05223";
+				mCallback.onVenueSelected(id, position);
+		}
+
 		@OnClick({R.id.text_details_site, R.id.image_details_site}) void onSiteClick(){
 				String url = mSiteTextView.getText().toString();
 				if(TextUtils.isEmpty(url)){
@@ -187,7 +217,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		@OnClick(R.id.button_details_submit) void onUpdateRatingClick(){
 				if(TextUtils.isEmpty(mRatingSubmitterEditText.getText())){
-						Toast.makeText(getActivity(), "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
+						Toast.makeText(mParentContext, "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
 				} else{
 						String ratingString = mRatingTextView.getText().toString();
 						final double rating;
@@ -206,7 +236,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 										String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 										String[] selectionArgs = {mVenueId};
 
-										getActivity().getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
+										mParentContext.getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
 								}
 						});
 						this.dismiss();
@@ -215,12 +245,12 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		//==============================================================================================
 		private boolean isOnboardingFinished() {
-				SharedPreferences pref = getActivity().getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				return pref.getBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, false);
 		}
 
 		private void finishDetailsOnboarding() {
-				SharedPreferences pref = getActivity().getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
+				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				SharedPreferences.Editor editor = pref.edit();
 				editor.putBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, true);
 				editor.apply();
@@ -270,7 +300,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				}
 				if (iterator.hasNext()) {
 						Map.Entry<String, View> next = iterator.next();
-						tutors.show(getActivity().getSupportFragmentManager(),  next.getValue(), next.getKey(), !iterator.hasNext());
+						tutors.show(((FragmentActivity)mParentContext).getSupportFragmentManager(),  next.getValue(), next.getKey(), !iterator.hasNext());
 				}
 		}
 
@@ -297,7 +327,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 						Bundle detailsBundle = new Bundle();
 						detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
-						getActivity().getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_DETAILS, detailsBundle, this);
+						((FragmentActivity)mParentContext).getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_DETAILS, detailsBundle, this);
 						return true;
 				}
 				return false;

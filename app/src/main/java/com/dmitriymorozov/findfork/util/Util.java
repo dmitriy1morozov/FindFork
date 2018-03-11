@@ -7,6 +7,7 @@ import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.model.explorePOJO.Venue;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.maps.android.SphericalUtil;
 import java.util.List;
 
 import static com.dmitriymorozov.findfork.util.Constants.*;
@@ -47,6 +48,15 @@ public class Util {
 				double widthDelta = (expandedWidth - width) / 2;
 				double heightDelta = (expandedHeight - height) / 2;
 				return new LatLngBounds(new LatLng(south - heightDelta, west - widthDelta), new LatLng(north + heightDelta, east + widthDelta));
+		}
+
+		/**
+		 * Utility method to generate LatLng object from provided position
+		 */
+		public static LatLngBounds toBounds(LatLng center, double radiusInMeters) {
+				LatLng southwest = SphericalUtil.computeOffset(center, radiusInMeters, Constants.SOUTH_WEST_DEGREES);
+				LatLng northeast = SphericalUtil.computeOffset(center, radiusInMeters, Constants.NORTH_EAST_DEGREES);
+				return new LatLngBounds(southwest, northeast);
 		}
 
 		/**
