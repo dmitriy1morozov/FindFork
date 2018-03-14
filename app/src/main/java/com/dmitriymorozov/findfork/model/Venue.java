@@ -43,20 +43,21 @@ public class Venue implements Comparable<Venue>,Parcelable {
 				return super.equals(obj);
 		}
 
+		//----------------------------------------------------------------------------------------------
 		@Override public int describeContents() {
 				return 0;
 		}
 
 		@Override public void writeToParcel(Parcel dest, int flags) {
-				dest.writeString(this.mVenueId);
-				dest.writeString(this.mName);
-				dest.writeInt(this.mDistance);
+				dest.writeString(mVenueId);
+				dest.writeString(mName);
+				dest.writeInt(mDistance);
 		}
 
-		protected Venue(Parcel in) {
-				this.mVenueId = in.readString();
-				this.mName = in.readString();
-				this.mDistance = in.readInt();
+		private Venue(Parcel in) {
+				mVenueId = in.readString();
+				mName = in.readString();
+				mDistance = in.readInt();
 		}
 
 		public static final Parcelable.Creator<Venue> CREATOR = new Parcelable.Creator<Venue>() {

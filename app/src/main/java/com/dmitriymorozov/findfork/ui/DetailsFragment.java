@@ -1,9 +1,7 @@
 package com.dmitriymorozov.findfork.ui;
 
-import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -11,9 +9,8 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
@@ -21,21 +18,6 @@ import android.support.v4.content.Loader;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.SeekBar;
-import android.widget.TextView;
-import android.widget.Toast;
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.OnClick;
-import butterknife.Unbinder;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
@@ -48,21 +30,24 @@ import com.popalay.tutors.TutorsBuilder;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import android.view.*;
+import android.widget.*;
+import butterknife.*;
 
 import static android.content.Context.MODE_PRIVATE;
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
-public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBarChangeListener,
+public class DetailsFragment extends Fragment implements SeekBar.OnSeekBarChangeListener,
 		LoaderManager.LoaderCallbacks<Cursor> {
 
-		public interface OnDetailsFragmentListener {
+		interface OnDetailsFragmentListener {
 				void onVenueSelected(String venueId, LatLng position);
 		}
 
 		private static final String TAG = "MyLogs DetailsFragment";
-		private static final String VENUE_ID_KEY = "venueId";
 
 		@BindView(R.id.text_details_name) TextView mNameTextView;
+		@BindView(R.id.image_details_address) ImageView mAddressImageView;
 		@BindView(R.id.text_details_address) TextView mAddressTextView;
 		@BindView(R.id.image_details_phone) ImageView mPhoneImageView;
 		@BindView(R.id.text_details_phone) TextView mPhoneTextView;
@@ -76,9 +61,10 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		@BindView(R.id.button_details_submit) Button mSubmitButton;
 
 		private Context mParentContext;
-		private OnDetailsFragmentListener mCallback;
+		private OnDetailsFragmentListener mOnDetailsListener;
 		private Unbinder mUnbinder;
 		private String mVenueId;
+		private LatLng mVenuePosition;
 
 		public void setVenueId(String mVenueId) {
 				this.mVenueId = mVenueId;
@@ -89,10 +75,9 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				super.onAttach(context);
 				mParentContext = context;
 				if (context instanceof OnDetailsFragmentListener) {
-						Log.d(TAG, "onAttach: DetailsFragment attached successfully");
-						mCallback = (OnDetailsFragmentListener) context;
+						mOnDetailsListener = (OnDetailsFragmentListener) context;
 				} else {
-						Log.d(TAG, "onAttach() failed: " + "parent context is not an instance of OnDetailsFragmentListener interface");
+						Log.d(TAG, "onAttach() failed: parent context is not an instance of OnDetailsFragmentListener interface");
 				}
 		}
 
@@ -100,7 +85,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
 				@Nullable Bundle savedInstanceState) {
 				if(savedInstanceState != null){
-						mVenueId = savedInstanceState.getString(VENUE_ID_KEY);
+						mVenueId = savedInstanceState.getString(Constants.BUNDLE_VENUE_ID);
 				}
 				View rootView = inflater.inflate(R.layout.fragment_details, container, false);
 				mUnbinder = ButterKnife.bind(this, rootView);
@@ -111,31 +96,17 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		@Override public void onResume() {
 				super.onResume();
 				Bundle generalBundle = new Bundle();
-				generalBundle.putString("uri", MyContentProvider.URI_CONTENT_VENUES.toString());
+				generalBundle.putString(Constants.BUNDLE_URI, MyContentProvider.URI_CONTENT_VENUES.toString());
 				((FragmentActivity)mParentContext).getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_GENERAL, generalBundle, this);
-		}
 
-		@NonNull @Override public Dialog onCreateDialog(Bundle savedInstanceState) {
-				final Dialog dialogDetails = super.onCreateDialog(savedInstanceState);
-				dialogDetails.requestWindowFeature(Window.FEATURE_NO_TITLE);
-				dialogDetails.setOnShowListener(new DialogInterface.OnShowListener() {
-						@Override public void onShow(DialogInterface dialog) {
-								Window dialogWindow =  dialogDetails.getWindow();
-								if(dialogWindow != null){
-										dialogWindow.setGravity(Gravity.TOP);
-										dialogWindow.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+				if(!isOnboardingFinished()) {
+						Handler handler = new Handler();
+						handler.postDelayed(new Runnable() {
+								@Override public void run() {
+										startDetailsOnboarding();
 								}
-								if(!isOnboardingFinished()){
-										Handler handler = new Handler();
-										handler.postDelayed(new Runnable() {
-												@Override public void run() {
-														startDetailsOnboarding();
-												}
-										}, 500);
-								}
-						}
-				});
-				return dialogDetails;
+						}, 500);
+				}
 		}
 
 		@Override public void onDestroyView() {
@@ -144,7 +115,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 
 		@Override public void onSaveInstanceState(Bundle outState) {
-				outState.putString(VENUE_ID_KEY, mVenueId);
+				outState.putString(Constants.BUNDLE_VENUE_ID, mVenueId);
 				super.onSaveInstanceState(outState);
 		}
 
@@ -164,7 +135,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		@Override public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 				Log.d(TAG, "onCreateLoader: ");
-				Uri contentUri = Uri.parse(args.getString("uri"));
+				Uri contentUri = Uri.parse(args.getString(Constants.BUNDLE_URI));
 				String selection = String.format(Locale.US, "%s = ?", DBContract.VENUE_ID);
 				String[] selectionArgs = { mVenueId };
 
@@ -174,11 +145,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 		}
 		@Override public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
 				Log.d(TAG, "onLoadFinished: ");
-				if(!this.isVisible()){
-						return;
-				}
-
-				if(!isParseGeneral(data)){
+				if(this.isVisible() && !isParseGeneral(data)){
 						parseDetailsAndDisplay(data);
 				}
 		}
@@ -188,11 +155,8 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		//==============================================================================================
 		@OnClick({R.id.text_details_address, R.id.image_details_address}) void onAddressClick(){
-				//TODO remove Gogi venue заглушка
-				this.dismiss();
-				LatLng position = new LatLng(50.44042962770835, 30.510291681163462);
-				String id = "55c33219498e99157ff05223";
-				mCallback.onVenueSelected(id, position);
+				((FragmentActivity)mParentContext).onBackPressed();
+				mOnDetailsListener.onVenueSelected(mVenueId, mVenuePosition);
 		}
 
 		@OnClick({R.id.text_details_site, R.id.image_details_site}) void onSiteClick(){
@@ -217,7 +181,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 
 		@OnClick(R.id.button_details_submit) void onUpdateRatingClick(){
 				if(TextUtils.isEmpty(mRatingSubmitterEditText.getText())){
-						Toast.makeText(mParentContext, "Please type your name to submit rating", Toast.LENGTH_SHORT).show();
+						Toast.makeText(mParentContext, R.string.details_error_rating_submit_no_name, Toast.LENGTH_SHORT).show();
 				} else{
 						String ratingString = mRatingTextView.getText().toString();
 						final double rating;
@@ -239,27 +203,26 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 										mParentContext.getContentResolver().update(MyContentProvider.URI_CONTENT_VENUES, contentValues,selection, selectionArgs);
 								}
 						});
-						this.dismiss();
+						((FragmentActivity)mParentContext).onBackPressed();
 				}
 		}
 
 		//==============================================================================================
 		private boolean isOnboardingFinished() {
 				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
-				return pref.getBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, false);
+				return pref.getBoolean(ATTR_ONBOARDING_DETAILS, false);
 		}
 
 		private void finishDetailsOnboarding() {
 				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				SharedPreferences.Editor editor = pref.edit();
-				editor.putBoolean(PREF_ATTR_ONBOARDING_DETAILS_FINISHED, true);
+				editor.putBoolean(ATTR_ONBOARDING_DETAILS, true);
 				editor.apply();
 		}
 
 		private void startDetailsOnboarding(){
 				final Map<String, View> tutorials = new LinkedTreeMap<>();
-				tutorials.put(getString(R.string.onboarding_details_name), mNameTextView);
-				tutorials.put(getString(R.string.onboarding_details_address), mAddressTextView);
+				tutorials.put(getString(R.string.onboarding_details_address), mAddressImageView);
 				tutorials.put(getString(R.string.onboarding_details_phone), mPhoneImageView);
 				tutorials.put(getString(R.string.onboarding_details_site), mSiteImageView);
 				tutorials.put(getString(R.string.onboarding_details_price), mPriceDescriptionTextView);
@@ -295,10 +258,7 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				showTutorial(tutors, iterator);
 		}
 		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
-				if (iterator == null) {
-						return;
-				}
-				if (iterator.hasNext()) {
+				if (iterator != null && iterator.hasNext()) {
 						Map.Entry<String, View> next = iterator.next();
 						tutors.show(((FragmentActivity)mParentContext).getSupportFragmentManager(),  next.getValue(), next.getKey(), !iterator.hasNext());
 				}
@@ -313,20 +273,25 @@ public class DetailsFragment extends DialogFragment implements SeekBar.OnSeekBar
 				Log.d(TAG, "isParseGeneral: ");
 				if(data != null && data.moveToFirst() && data.getColumnIndex(DBContract.VENUE_NAME) != -1){
 						int indexName = data.getColumnIndex(DBContract.VENUE_NAME);
+						int indexLat = data.getColumnIndex(DBContract.VENUE_LAT);
+						int indexLng = data.getColumnIndex(DBContract.VENUE_LNG);
 						int indexRating = data.getColumnIndex(DBContract.VENUE_RATING);
 						int indexRatingSubmitter = data.getColumnIndex(DBContract.VENUE_RATING_SUBMITTER);
 
 						String name = data.getString(indexName);
+						double latitude = data.getDouble(indexLat);
+						double longitude = data.getDouble(indexLng);
 						double rating = data.getDouble(indexRating);
 						int ratingBar = (int)(rating * 10);
 						String ratingSubmitter = data.getString(indexRatingSubmitter);
 
 						mNameTextView.setText(name);
+						mVenuePosition = new LatLng(latitude, longitude);
 						mRatingSeekBar.setProgress(ratingBar);
 						mRatingSubmitterEditText.setText(ratingSubmitter);
 
 						Bundle detailsBundle = new Bundle();
-						detailsBundle.putString("uri", MyContentProvider.URI_CONTENT_DETAILS.toString());
+						detailsBundle.putString(Constants.BUNDLE_URI, MyContentProvider.URI_CONTENT_DETAILS.toString());
 						((FragmentActivity)mParentContext).getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_VENUE_DETAILS, detailsBundle, this);
 						return true;
 				}

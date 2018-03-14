@@ -1,5 +1,6 @@
 package com.dmitriymorozov.findfork.database;
 
+import android.util.Log;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -7,7 +8,6 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.util.Log;
 import java.util.Locale;
 import android.support.annotation.NonNull;
 
@@ -15,7 +15,7 @@ import static com.dmitriymorozov.findfork.database.DBContract.*;
 
 public class MyContentProvider extends ContentProvider {
 		private static final String TAG = "MyLogs ContentProvider";
-		private static final String AUTHORITY = "com.dmitriymorozov.findfork.database";
+		private static final String AUTHORITY = "com.dmitriymorozov.findfork.db";
 
 		public static final Uri URI_CONTENT_VENUES = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_VENUES));
 		public static final Uri URI_CONTENT_DETAILS = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_DETAILS));
@@ -84,7 +84,6 @@ public class MyContentProvider extends ContentProvider {
 				switch (URI_MATCHER.match(uri)){
 						case URI_MATCH_VENUE_MULTIPLE:
 								rowsRemoved = mSqliteDatabase.delete(TABLE_VENUES, selection, selectionArgs);
-
 								Log.d(TAG, "delete: rows removed = " + rowsRemoved);
 								break;
 						default:

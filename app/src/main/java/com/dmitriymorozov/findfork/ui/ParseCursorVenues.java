@@ -11,7 +11,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-public class ParseCursorVenues extends AsyncTask<Void, Void, ArrayList<Venue>> {
+class ParseCursorVenues extends AsyncTask<Void, Void, ArrayList<Venue>> {
 
 		interface OnTaskFinished {
 				void deliverNewVenues(ArrayList<Venue> newVenues);

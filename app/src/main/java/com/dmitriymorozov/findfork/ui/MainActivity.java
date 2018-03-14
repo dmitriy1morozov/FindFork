@@ -1,5 +1,6 @@
 package com.dmitriymorozov.findfork.ui;
 
+import android.util.Log;
 import android.Manifest;
 import android.app.Service;
 import android.content.ComponentName;
@@ -25,15 +26,6 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
-import android.view.View;
-import android.widget.CheckBox;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.Toast;
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.OnClick;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.service.FoursquareService;
@@ -52,14 +44,15 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.gson.internal.LinkedTreeMap;
 import com.google.maps.android.SphericalUtil;
-import com.popalay.tutors.TutorialListener;
-import com.popalay.tutors.Tutors;
-import com.popalay.tutors.TutorsBuilder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import android.view.*;
+import android.widget.*;
+import butterknife.*;
+import com.popalay.tutors.*;
 
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
@@ -68,6 +61,7 @@ public class MainActivity extends AppCompatActivity
 		LoaderManager.LoaderCallbacks<Cursor>,
 		PlaceSelectionListener, OnCompleteListener<Location>,
 		MapFragment.OnMapFragmentListener,
+		OnDetailsStartListener,
 		OnLoadMoreListener,
 		DetailsFragment.OnDetailsFragmentListener{
 		private static final String TAG = "MyLogs MainActivity";
@@ -75,7 +69,7 @@ public class MainActivity extends AppCompatActivity
 		private static final boolean TOGGLE_MAP = true;
 		private static final boolean TOGGLE_LIST = false;
 
-		@BindView(R.id.btn_main_device_location) ImageView mDeviceLocationImageView;
+		@BindView(R.id.btn_main_gps) ImageView mGpsImageView;
 		@BindView(R.id.btn_main_toggle_mode) CheckBox mToggleMode;
 		@BindView(R.id.progress_main_downloading) ProgressBar mLoadingProgress;
 		private FusedLocationProviderClient mFusedLocationClient;
@@ -83,6 +77,7 @@ public class MainActivity extends AppCompatActivity
 
 		private MapFragment mMapFragment;
 		private ListFragment mListFragment;
+		private DetailsFragment mDetailsFragment;
 
 		private FoursquareService.LocalBinder mBinder;
 		private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -109,9 +104,9 @@ public class MainActivity extends AppCompatActivity
 						mToggleMode.setChecked(TOGGLE_MAP);
 						mMapFragment = new MapFragment();
 						getSupportFragmentManager().beginTransaction()
-								.add(R.id.frame_main_container, mMapFragment, "map")
+								.add(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP)
 								.commit();
-						mDeviceLocationImageView.callOnClick();
+						mGpsImageView.callOnClick();
 				}
 
 				mAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(
@@ -144,7 +139,7 @@ public class MainActivity extends AppCompatActivity
 		 */
 		private boolean isMainOnboardingFinished() {
 				SharedPreferences pref = getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
-				return pref.getBoolean(PREF_ATTR_ONBOARDING_MAIN_FINISHED, false);
+				return pref.getBoolean(ATTR_ONBOARDING_MAIN, false);
 		}
 
 		/**
@@ -153,19 +148,19 @@ public class MainActivity extends AppCompatActivity
 		private void finishMainOnboarding() {
 				SharedPreferences pref = getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				SharedPreferences.Editor editor = pref.edit();
-				editor.putBoolean(PREF_ATTR_ONBOARDING_MAIN_FINISHED, true);
+				editor.putBoolean(ATTR_ONBOARDING_MAIN, true);
 				editor.apply();
 
 				mToggleMode.setChecked(TOGGLE_MAP);
 				mMapFragment = new MapFragment();
 				getSupportFragmentManager().beginTransaction()
-						.add(R.id.frame_main_container, mMapFragment, "map")
+						.add(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP)
 						.commit();
 		}
 
 		private void startMainOnboarding(){
 				final Map<String, View> tutorials = new LinkedTreeMap<>();
-				tutorials.put(getString(R.string.onboarding_main_gps), mDeviceLocationImageView);
+				tutorials.put(getString(R.string.onboarding_main_gps), mGpsImageView);
 				tutorials.put(getString(R.string.onboarding_main_search), findViewById(R.id.frame_main_place_autocomplete));
 				tutorials.put(getString(R.string.onboarding_main_toggle), mToggleMode);
 				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
@@ -196,10 +191,7 @@ public class MainActivity extends AppCompatActivity
 				});
 		}
 		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
-				if (iterator == null) {
-						return;
-				}
-				if (iterator.hasNext()) {
+				if (iterator != null && iterator.hasNext()) {
 						Map.Entry<String, View> next = iterator.next();
 						tutors.show(getSupportFragmentManager(), next.getValue(), next.getKey(), !iterator.hasNext());
 				}
@@ -207,8 +199,15 @@ public class MainActivity extends AppCompatActivity
 
 		private void updatePosition(LatLngBounds visibleBounds) {
 				Log.d(TAG, "updatePosition:");
-				if(mToggleMode.isChecked() == TOGGLE_LIST){
-						mToggleMode.performClick();
+				mToggleMode.setChecked(TOGGLE_MAP);
+				if (mMapFragment == null) {
+						Log.d(TAG, "onToggleMode: new MapFragment");
+						mMapFragment = new MapFragment();
+				}
+				if(!mMapFragment.isVisible()){
+						FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP);
+						fragmentTransaction.commitNow();
 						mMapFragment.setVisibleBounds(visibleBounds);
 				}else{
 						mMapFragment.moveCamera(visibleBounds);
@@ -218,8 +217,8 @@ public class MainActivity extends AppCompatActivity
 		private void deliverVenuesDataToFragment(Cursor data) {
 				Log.d(TAG, "deliverVenuesDataToFragment:");
 
-				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("map");
-				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag("list");
+				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_MAP);
+				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_LIST);
 				if (mMapFragment != null && mMapFragment.isVisible()) {
 						mMapFragment.venuesDataReceived(data);
 				}
@@ -248,8 +247,8 @@ public class MainActivity extends AppCompatActivity
 				}
 				//Download from localDB using CursorLoader
 				Bundle args = new Bundle();
-				args.putParcelable("bounds", bounds);
-				args.putDouble("minRatingFilter", minRatingFilter);
+				args.putParcelable(Constants.BUNDLE_VISIBLE_BOUNDS, bounds);
+				args.putDouble(Constants.BUNDLE_MIN_RATING, minRatingFilter);
 				getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_MAIN, args, this);
 		}
 
@@ -260,15 +259,15 @@ public class MainActivity extends AppCompatActivity
 				}
 				//Download from localDB using CursorLoader
 				Bundle args = new Bundle();
-				args.putParcelable("bounds", bounds);
-				args.putDouble("minRatingFilter", 0);
+				args.putParcelable(Constants.BUNDLE_VISIBLE_BOUNDS, bounds);
+				args.putDouble(Constants.BUNDLE_MIN_RATING, 0);
 				getSupportLoaderManager().restartLoader(Constants.CURSOR_ID_MAIN, args, this);
 		}
 		//==============================================================================================
 		/**
 		 * device_location button onClickListener
 		 */
-		@OnClick(R.id.btn_main_device_location) void onDeviceLocationClick() {
+		@OnClick(R.id.btn_main_gps) void onGpsClick() {
 				if (mAutocompleteFragment != null) {
 						mAutocompleteFragment.setText("");
 				}
@@ -300,10 +299,13 @@ public class MainActivity extends AppCompatActivity
 		 *
 		 * @param view - ref to ToogleButton
 		 */
-		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(android.widget.Checkable view) {
+		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(Checkable view) {
 				boolean mode = view.isChecked();
-				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+				if(mDetailsFragment != null && mDetailsFragment.isVisible()){
+						onBackPressed();
+				}
 
+				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 				if (mode == TOGGLE_LIST) {
 						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
 						if (mMapFragment != null) {
@@ -314,7 +316,7 @@ public class MainActivity extends AppCompatActivity
 								Log.d(TAG, "onToggleMode: new ListFragment");
 								mListFragment = new ListFragment();
 						}
-						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, "list");
+						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, Constants.FRAGMENT_TAG_LIST);
 						fragmentTransaction.commitNow();
 						mListFragment.setVisibleBounds(visibleBounds);
 				}
@@ -328,7 +330,7 @@ public class MainActivity extends AppCompatActivity
 								Log.d(TAG, "onToggleMode: new MapFragment");
 								mMapFragment = new MapFragment();
 						}
-						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, "map");
+						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP);
 						fragmentTransaction.commitNow();
 						mMapFragment.setVisibleBounds(visibleBounds);
 				}
@@ -346,14 +348,13 @@ public class MainActivity extends AppCompatActivity
 						Location location = task.getResult();
 						deviceLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 				} else {
-						Toast.makeText(this, "ErrorResponse! Couldn't detect your location",
-								Toast.LENGTH_SHORT).show();
+						Toast.makeText(this, "ErrorResponse! Couldn't detect your location", Toast.LENGTH_SHORT).show();
 						deviceLatLng = LOCATION_DEFAULT;
 				}
 
-				LatLng sountWest = SphericalUtil.computeOffset(deviceLatLng, 200, SOUTH_WEST_DEGREES);
+				LatLng southWest = SphericalUtil.computeOffset(deviceLatLng, 200, SOUTH_WEST_DEGREES);
 				LatLng northEast = SphericalUtil.computeOffset(deviceLatLng, 200, NORTH_EAST_DEGREES);
-				LatLngBounds visibleBounds = new LatLngBounds(sountWest, northEast);
+				LatLngBounds visibleBounds = new LatLngBounds(southWest, northEast);
 				updatePosition(visibleBounds);
 		}
 
@@ -403,8 +404,8 @@ public class MainActivity extends AppCompatActivity
 		@Override public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 				Log.d(TAG, "onCreateLoader: ");
 
-				double minRatingFilter = args.getDouble("minRatingFilter");
-				LatLngBounds bounds = args.getParcelable("bounds");
+				double minRatingFilter = args.getDouble(Constants.BUNDLE_MIN_RATING);
+				LatLngBounds bounds = args.getParcelable(Constants.BUNDLE_VISIBLE_BOUNDS);
 				assert bounds != null;
 				double south = bounds.southwest.latitude;
 				double north = bounds.northeast.latitude;
@@ -484,11 +485,11 @@ public class MainActivity extends AppCompatActivity
 								}
 								if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 										Log.d(TAG, "onRequestPermissionsResult: GRANTED");
-										mDeviceLocationImageView.callOnClick();
+										mGpsImageView.callOnClick();
 								} else {
 										if (!shouldShowRequestPermissionRationale(
 												Manifest.permission.ACCESS_FINE_LOCATION)) {
-												Snackbar.make(mDeviceLocationImageView,
+												Snackbar.make(mGpsImageView,
 														"Location permissions denied permanently", Snackbar.LENGTH_LONG)
 														.setAction("Grant", new View.OnClickListener() {
 																@Override public void onClick(View v) {
@@ -511,15 +512,21 @@ public class MainActivity extends AppCompatActivity
 				}
 		}
 
-		@Override protected void onResume() {
-				super.onResume();
+		@Override public void onDetailsStart(String venueId) {
+				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+				if(mDetailsFragment == null){
+						mDetailsFragment = new DetailsFragment();
+				}
+				mDetailsFragment.setVenueId(venueId);
+				fragmentTransaction.replace(R.id.frame_main_container, mDetailsFragment);
+				fragmentTransaction.addToBackStack(Constants.FRAGMENT_TAG_DETAILS);
+				fragmentTransaction.commit();
 		}
 
 		@Override public void onVenueSelected(String venueId, LatLng position) {
 				Log.d(TAG, "onVenueSelected: ");
-
-				LatLngBounds bounds = Util.toBounds(position, 500);
+				LatLngBounds bounds = Util.toBounds(position, 200);
 				updatePosition(bounds);
-				//mMapFragment.highlightSelectedVenue(venueId);
+				mMapFragment.setHighlightedVenueId(venueId);
 		}
 }

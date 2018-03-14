@@ -10,7 +10,7 @@ import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.model.Venue;
 import java.util.ArrayList;
 
-public class VenueListAdapter extends BaseAdapter {
+class VenueListAdapter extends BaseAdapter {
 
 		private final LayoutInflater mLayoutInflater;
 		private final ArrayList<Venue> mVenues;

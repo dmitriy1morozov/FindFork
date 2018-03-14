@@ -1,9 +1,12 @@
 package com.dmitriymorozov.findfork.util;
 
 import android.content.ContentValues;
+import android.content.Context;
+import android.location.LocationManager;
 import android.support.annotation.NonNull;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
+import com.dmitriymorozov.findfork.model.explorePOJO.Location;
 import com.dmitriymorozov.findfork.model.explorePOJO.Venue;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -12,7 +15,7 @@ import java.util.List;
 
 import static com.dmitriymorozov.findfork.util.Constants.*;
 
-public class Util {
+public final class Util {
 
 		/**
 		 * Calculates distance in meters between two points
@@ -60,6 +63,7 @@ public class Util {
 		}
 
 		/**
+		 * HEAVY METHOD!
 		 * Utility method to convert List<ItemsItem> into venues ContentValues[] structure
 		 */
 		public static ContentValues[] createVenuesContentValuesArray(@NonNull List<ItemsItem> venueList){
@@ -84,6 +88,7 @@ public class Util {
 		}
 
 		/**
+		 * HEAVY METHOD!
 		 * Utility method to convert List<ItemsItem> into details ContentValues[] structure
 		 */
 		public static ContentValues[] createDetailsContentValuesArray(@NonNull List<ItemsItem> venueList){
@@ -99,7 +104,8 @@ public class Util {
 						Integer priceTier = null;
 						String priceCurrency = null;
 						String priceMessage = null;
-						if(singleVenue.getLocation() != null && singleVenue.getLocation().getFormattedAddress() != null){
+						Location location = singleVenue.getLocation();
+						if(location != null && location.getFormattedAddress() != null){
 								addressFormatted = formattedAddressToString(singleVenue.getLocation().getFormattedAddress());
 						}
 						if(singleVenue.getContact() != null){
@@ -133,9 +139,13 @@ public class Util {
 				StringBuilder stringBuilder = new StringBuilder();
 				for (int i = 0; i < listSize - 1; i++) {
 						stringBuilder.append(formattedAddress.get(i));
-						stringBuilder.append("\n");
+						stringBuilder.append('\n');
 				}
 				stringBuilder.append(formattedAddress.get(listSize-1));
 				return stringBuilder.toString();
+		}
+
+		//----------------------------------------------------------------------------------------------
+		private Util() {
 		}
 }

@@ -1,23 +1,30 @@
 package com.dmitriymorozov.findfork.util;
 
 import com.dmitriymorozov.findfork.database.DBContract;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.*;
 import java.util.Locale;
 
 public final class Constants {
 
 		public static final String PREF_ONBOARDING = "onboardingSharedPreferences";
-		public static final String PREF_ATTR_ONBOARDING_MAIN_FINISHED = "onboardingMainFinished";
-		public static final String PREF_ATTR_ONBOARDING_MAP_FINISHED = "onboardingMapFinished";
-		public static final String PREF_ATTR_ONBOARDING_LIST_FINISHED = "onboardingListFinished";
-		public static final String PREF_ATTR_ONBOARDING_DETAILS_FINISHED = "onboardingDetailsFinished";
+		public static final String ATTR_ONBOARDING_MAIN = "onboardingMainFinished";
+		public static final String ATTR_ONBOARDING_MAP = "onboardingMapFinished";
+		public static final String ATTR_ONBOARDING_DETAILS = "onboardingDetailsFinished";
 
-		public static final LatLngBounds DEFAULT_VISIBLE_BOUNDS = new LatLngBounds(
-				new LatLng(50.454295, 30.506042),
-				new LatLng(50.470509, 30.529000));
+		public static final String BUNDLE_URI = "uri";
+		public static final String BUNDLE_VENUE_ID = "venueId";
+		public static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
+		public static final String BUNDLE_MIN_RATING = "minRatingFilter";
+
+
+		public static final String API_CLIENT_ID = "Z5QQULAXLH33K4G21YD1JSXZ3K4IGZLLVS1QMCEGRV3CGK4K";
+		public static final String API_CLIENT_SECRET = "OYHK43EOG4EGFNFUERWV2BOTW0LY3BGBTDXTYPLMXHTFACFE";
+
+		public static final String FRAGMENT_TAG_MAP = "mapFragment";
+		public static final String FRAGMENT_TAG_LIST = "listFragment";
+		public static final String FRAGMENT_TAG_DETAILS = "detailsFragment";
+
+		public static final LatLngBounds DEFAULT_VISIBLE_BOUNDS = new LatLngBounds(new LatLng(50.454295, 30.506042), new LatLng(50.470509, 30.529000));
 		public static final LatLng LOCATION_DEFAULT = new LatLng(50.458843, 30.517561);
 
 
@@ -57,4 +64,8 @@ public final class Constants {
 		public static final BitmapDescriptor MARKER_DEFAULT = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE);
 		public static final BitmapDescriptor MARKER_BEST_RATING = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN);
 		public static final BitmapDescriptor MARKER_SELECTED_VENUE = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE);
+
+		//----------------------------------------------------------------------------------------------
+		private Constants() {
+		}
 }

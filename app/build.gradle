@@ -4,7 +4,7 @@ android {
   compileSdkVersion project.ext.myCompileSdkVersion
   buildToolsVersion project.ext.myBuildToolsVersion
   defaultConfig {
-    applicationId 'com.dmitriymorozov.knifeandfork'
+    applicationId 'com.dmitriymorozov.findfork'
     minSdkVersion project.ext.myMinSdkVersion
     targetSdkVersion project.ext.myTargetSdkVersion
     versionCode 1

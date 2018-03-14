@@ -1,5 +1,6 @@
 package com.dmitriymorozov.findfork.ui;
 
+import android.util.Log;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -8,14 +9,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentTransaction;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.util.Constants;
@@ -24,21 +17,19 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.google.gson.internal.LinkedTreeMap;
-import com.popalay.tutors.TutorialListener;
-import com.popalay.tutors.Tutors;
-import com.popalay.tutors.TutorsBuilder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import android.view.*;
+import android.widget.*;
+import com.popalay.tutors.*;
 
 import static android.content.Context.MODE_PRIVATE;
 import static com.dmitriymorozov.findfork.util.Constants.*;
@@ -47,24 +38,24 @@ public class MapFragment extends Fragment
 		implements OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnMarkerClickListener,
 		SeekBar.OnSeekBarChangeListener, GoogleMap.OnMapLoadedCallback {
 
-		public interface OnMapFragmentListener {
+		interface OnMapFragmentListener {
 				void onMapChanged(LatLngBounds bounds, double minRatingFilter);
 		}
 
 		//----------------------------------------------------------------------------------------------
 		private static final String TAG = "MyLogs MapFragment";
-		private static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
 
 		private Context mParentContext;
 
 		private MapView mMapView;
-		private GoogleMap mMap;
+		private GoogleMap mGoogleMap;
 		private SeekBar mRatingSeekbar;
 		private TextView mRatingFilterTextView;
 		private double mMinRatingFilter;
 
 		private LatLngBounds mVisibleBounds;
-		private OnMapFragmentListener mCallback;
+		private OnMapFragmentListener mOnMapListener;
+		private OnDetailsStartListener mOnDetailsStartListener;
 		private Map<String, Marker> mVenueMarkers;
 		private String mHighlightedVenueId;
 
@@ -73,7 +64,8 @@ public class MapFragment extends Fragment
 				super.onAttach(context);
 				mParentContext = context;
 				try {
-						mCallback = (OnMapFragmentListener) mParentContext;
+						mOnMapListener = (OnMapFragmentListener) mParentContext;
+						mOnDetailsStartListener = (OnDetailsStartListener)mParentContext;
 				} catch (ClassCastException  cce) {
 						Log.d(TAG, "onAttach: ErrorResponse: " + cce.getMessage());
 				}
@@ -95,7 +87,7 @@ public class MapFragment extends Fragment
 				}
 
 				if(savedInstanceState != null){
-						mVisibleBounds = savedInstanceState.getParcelable(BUNDLE_VISIBLE_BOUNDS);
+						mVisibleBounds = savedInstanceState.getParcelable(Constants.BUNDLE_VISIBLE_BOUNDS);
 				}
 				return rootView;
 		}
@@ -129,7 +121,7 @@ public class MapFragment extends Fragment
 		@Override public void onSaveInstanceState(Bundle outState) {
 				Log.d(TAG, "onSaveInstanceState: ");
 				mMapView.onSaveInstanceState(outState);
-				outState.putParcelable(BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
+				outState.putParcelable(Constants.BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
 				super.onSaveInstanceState(outState);
 		}
 
@@ -155,13 +147,13 @@ public class MapFragment extends Fragment
 		//==============================================================================================
 		private boolean isMapOnboardingFinished() {
 				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
-				return pref.getBoolean(PREF_ATTR_ONBOARDING_MAP_FINISHED, false);
+				return pref.getBoolean(ATTR_ONBOARDING_MAP, false);
 		}
 
 		private void finishMapOnboarding() {
 				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				SharedPreferences.Editor editor = pref.edit();
-				editor.putBoolean(PREF_ATTR_ONBOARDING_MAP_FINISHED, true);
+				editor.putBoolean(ATTR_ONBOARDING_MAP, true);
 				editor.apply();
 		}
 
@@ -199,10 +191,7 @@ public class MapFragment extends Fragment
 				showTutorial(tutors, iterator);
 		}
 		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
-				if (iterator == null) {
-						return;
-				}
-				if (iterator.hasNext()) {
+				if (iterator != null && iterator.hasNext()) {
 						Map.Entry<String, View> next = iterator.next();
 						tutors.show(getChildFragmentManager(), next.getValue(), next.getKey(), !iterator.hasNext());
 				}
@@ -210,9 +199,9 @@ public class MapFragment extends Fragment
 
 		private void handleVisibleRectangle(){
 				Log.d(TAG, "handleVisibleRectangle: ");
-				VisibleRegion visibleRegion = mMap.getProjection().getVisibleRegion();
+				VisibleRegion visibleRegion = mGoogleMap.getProjection().getVisibleRegion();
 				mVisibleBounds = visibleRegion.latLngBounds;
-				mCallback.onMapChanged(mVisibleBounds, mMinRatingFilter);
+				mOnMapListener.onMapChanged(mVisibleBounds, mMinRatingFilter);
 		}
 
 		private void addVenuesMarkersOnMap(Cursor venues) {
@@ -232,13 +221,13 @@ public class MapFragment extends Fragment
 								double longitude = venues.getDouble(indexLng);
 								LatLng position = new LatLng(latitude, longitude);
 
-								Marker marker = mMap.addMarker(new MarkerOptions()
+								Marker marker = mGoogleMap.addMarker(new MarkerOptions()
 										.position(position)
 										.draggable(false));
 								marker.setTag(id);
 								marker.setIcon(Constants.MARKER_DEFAULT);
 								mVenueMarkers.put(id, marker);
-								mMap.setOnMarkerClickListener(this);
+								mGoogleMap.setOnMarkerClickListener(this);
 						}while(venues.moveToNext());
 
 						//Enter point for onboarding procedure. It starts when the map is filled with markers
@@ -265,16 +254,36 @@ public class MapFragment extends Fragment
 				}
 		}
 
+		private void highlightSelectedVenue(String venueId){
+				if(venueId == null){
+						return;
+				}
+				Marker venueMarker = mVenueMarkers.get(venueId);
+				if(venueMarker != null){
+						venueMarker.setIcon(Constants.MARKER_SELECTED_VENUE);
+				}
+		}
+
+		private void unHighlightSelectedVenue(){
+				if(mHighlightedVenueId == null){
+						return;
+				}
+				Marker venueMarker = mVenueMarkers.get(mHighlightedVenueId);
+				if(venueMarker != null){
+						venueMarker.setIcon(Constants.MARKER_DEFAULT);
+						mHighlightedVenueId = null;
+				}
+		}
 		//==============================================================================================
 		@Override public void onMapReady(GoogleMap googleMap) {
 				Log.d(TAG, "onMapReady: ");
-				mMap = googleMap;
-				mMap.setOnMapLoadedCallback(this);
+				mGoogleMap = googleMap;
+				mGoogleMap.setOnMapLoadedCallback(this);
 		}
 
 		@Override public void onMapLoaded() {
 				Log.d(TAG, "onMapLoaded: ");
-				mMap.setOnCameraIdleListener(this);
+				mGoogleMap.setOnCameraIdleListener(this);
 				if(mVisibleBounds != null){
 						moveCamera(mVisibleBounds);
 				}else{
@@ -286,14 +295,13 @@ public class MapFragment extends Fragment
 		@Override public void onCameraIdle() {
 				Log.d(TAG, "onCameraIdle: ");
 				handleVisibleRectangle();
+				unHighlightSelectedVenue();
 		}
 
 		@Override public boolean onMarkerClick(Marker marker) {
 				Log.d(TAG, "onMarkerClick: ");
-				FragmentTransaction fragmentTransaction = ((FragmentActivity)mParentContext).getSupportFragmentManager().beginTransaction();
-				DetailsFragment detailsFragment = new DetailsFragment();
-				detailsFragment.setVenueId(String.valueOf(marker.getTag()));
-				detailsFragment.show(fragmentTransaction, "venueDetails");
+				String venueId = String.valueOf(marker.getTag());
+				mOnDetailsStartListener.onDetailsStart(venueId);
 				return false;
 		}
 
@@ -332,30 +340,22 @@ public class MapFragment extends Fragment
 
 		public void moveCamera(LatLngBounds visibleBounds){
 				Log.d(TAG, "moveCamera: ");
-				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(visibleBounds, 0));
-		}
-
-		public void setHighlightedVenueId(@NonNull String venueId){
-				mHighlightedVenueId = venueId;
-		}
-
-		public void highlightSelectedVenue(String venueId){
-				if(venueId == null){
-						return;
+				if(mGoogleMap != null){
+						mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(visibleBounds, 0));
 				}
-				Marker venueMarker = mVenueMarkers.get(venueId);
-				if(venueMarker == null){
-						return;
-				}
-				venueMarker.setIcon(Constants.MARKER_SELECTED_VENUE);
 		}
 
 		public void venuesDataReceived(Cursor data){
 				mVenueMarkers.clear();
-				if(mMap != null){
-						mMap.clear();
+				if(mGoogleMap != null){
+						mGoogleMap.clear();
 						addVenuesMarkersOnMap(data);
 						highlightTopRankedVenues(data);
+						highlightSelectedVenue(mHighlightedVenueId);
 				}
+		}
+
+		public void setHighlightedVenueId(@NonNull String venueId){
+				mHighlightedVenueId = venueId;
 		}
 }

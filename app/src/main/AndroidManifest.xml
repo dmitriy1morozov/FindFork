@@ -39,7 +39,7 @@
 
 				<provider
 						android:name=".database.MyContentProvider"
-						android:authorities="com.dmitriymorozov.findfork.database"
+						android:authorities="com.dmitriymorozov.findfork.db"
 						android:enabled="true"
 						android:exported="false">
 				</provider>

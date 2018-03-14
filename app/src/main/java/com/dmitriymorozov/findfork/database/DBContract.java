@@ -4,12 +4,6 @@ import android.provider.BaseColumns;
 import java.util.Locale;
 
 public class DBContract implements BaseColumns {
-		static final int DB_VERSION = 1;
-
-		static final String DB_NAME = "foursquare";
-		static final String TABLE_VENUES = "venues";
-		static final String TABLE_DETAILS = "details";
-
 		public static final String VENUE_ID = "venue_id";
 		public static final String VENUE_NAME = "name";
 		public static final String VENUE_LAT = "latitude";
@@ -24,6 +18,12 @@ public class DBContract implements BaseColumns {
 		public static final String DETAILS_PRICE_TIER = "price_tier";
 		public static final String DETAILS_PRICE_CURRENCY = "price_currency";
 		public static final String DETAILS_PRICE_MESSAGE = "price_message";
+
+
+		static final int DB_VERSION = 1;
+		static final String DB_NAME = "foursquare";
+		static final String TABLE_VENUES = "venues";
+		static final String TABLE_DETAILS = "details";
 
 		static final String CREATE_TABLE_VENUES = String.format(Locale.US,
 				"create table %s "
@@ -50,4 +50,8 @@ public class DBContract implements BaseColumns {
 				VENUE_ID, TABLE_VENUES, VENUE_ID,
 				VENUE_ID
 		);
+
+		//----------------------------------------------------------------------------------------------
+		private DBContract() {
+		}
 }

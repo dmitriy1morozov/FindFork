@@ -21,9 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import retrofit2.*;
 
 import static com.dmitriymorozov.findfork.database.MyContentProvider.*;
 
@@ -43,15 +41,13 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 						String sw = String.format(Locale.US, "%s,%s", mVisibleBounds.southwest.latitude, mVisibleBounds.southwest.longitude);
 						String ne = String.format(Locale.US, "%s,%s", mVisibleBounds.northeast.latitude, mVisibleBounds.northeast.longitude);
 
-						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(CLIENT_ID, CLIENT_SECRET, sw, ne, "browse", "food", 200);
+						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(Constants.API_CLIENT_ID, Constants.API_CLIENT_SECRET, sw, ne, "browse", "food", 200);
 						call.enqueue(FoursquareService.this);
 				}
 		}
 
 		//==============================================================================================
 		private static final String TAG = "MyLogs Service";
-		private static final String CLIENT_ID = "Z5QQULAXLH33K4G21YD1JSXZ3K4IGZLLVS1QMCEGRV3CGK4K";
-		private static final String CLIENT_SECRET = "OYHK43EOG4EGFNFUERWV2BOTW0LY3BGBTDXTYPLMXHTFACFE";
 		private static final int SERVICE_ERROR_CODE = 0;
 		private static final int EXPAND_REGION_DEFAULT_COEF = 121;
 
@@ -88,7 +84,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 				}
 		}
 		//==============================================================================================
-		private void handleRetrofitResponse(final Response<FoursquareJSON> response) {
+		private void handleRetrofitResponse(Response<FoursquareJSON> response) {
 
 				if (!response.isSuccessful()) {
 						Log.d(TAG, "Retrofit response.isSuccessful() == false. FAIL. JSON.raw = " + response.raw());
@@ -126,7 +122,7 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 		/**
 		 * Removes from localDB all rows that are outside of provided rectangle multiplied by coefficient
 		 */
-		private void removeOutsideVenuesFromLocalDb(final LatLngBounds bounds) {
+		private void removeOutsideVenuesFromLocalDb(LatLngBounds bounds) {
 				double south = bounds.southwest.latitude;
 				double north = bounds.northeast.latitude;
 				double west = bounds.southwest.longitude;

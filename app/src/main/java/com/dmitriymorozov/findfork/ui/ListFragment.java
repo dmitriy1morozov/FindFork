@@ -4,8 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,10 +25,10 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 		ParseCursorVenues.OnTaskFinished {
 		//==============================================================================================
 		private static final String TAG = "MyLogs ListFragment";
-		private static final String BUNDLE_VISIBLE_BOUNDS = "visibleBounds";
 
 		private Context mParentContext;
-		private OnLoadMoreListener mCallback;
+		private OnLoadMoreListener mOnLoadMoreListener;
+		private OnDetailsStartListener mOnDetailsStartListener;
 
 		private LatLngBounds mVisibleBounds;
 		private boolean isLoading;
@@ -49,9 +47,10 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 				super.onAttach(context);
 				mParentContext = context;
 				if (context instanceof OnLoadMoreListener) {
-						mCallback = (OnLoadMoreListener) context;
+						mOnLoadMoreListener = (OnLoadMoreListener) context;
+						mOnDetailsStartListener = (OnDetailsStartListener) context;
 				} else {
-						Log.d(TAG, "onAttach() failed: " + "parent context is not an instance of OnLoadMoreListener interface");
+						Log.d(TAG, "onAttach() failed: parent context is not an instance of OnLoadMoreListener interface");
 				}
 		}
 
@@ -64,7 +63,7 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 		@Override public void onActivityCreated(@Nullable Bundle savedInstanceState) {
 				super.onActivityCreated(savedInstanceState);
 				if(savedInstanceState != null){
-						mVisibleBounds = savedInstanceState.getParcelable(BUNDLE_VISIBLE_BOUNDS);
+						mVisibleBounds = savedInstanceState.getParcelable(Constants.BUNDLE_VISIBLE_BOUNDS);
 				} else{
 						mVisibleBounds = Constants.DEFAULT_VISIBLE_BOUNDS;
 				}
@@ -77,7 +76,7 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 		}
 
 		@Override public void onSaveInstanceState(Bundle outState) {
-				outState.putParcelable(BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
+				outState.putParcelable(Constants.BUNDLE_VISIBLE_BOUNDS, mVisibleBounds);
 				super.onSaveInstanceState(outState);
 		}
 
@@ -90,11 +89,10 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 		@Override public void onListItemClick(ListView listView, View view, int position, long id) {
 				super.onListItemClick(listView, view, position, id);
 				Log.d(TAG, "onListItemClick: ");
-				String venueId = mVenueListAdapter.getItem(position).getVenueId();
-				FragmentTransaction fragmentTransaction = ((FragmentActivity)mParentContext).getSupportFragmentManager().beginTransaction();
-				DetailsFragment detailsFragment = new DetailsFragment();
-				detailsFragment.setVenueId(venueId);
-				detailsFragment.show(fragmentTransaction, "venueDetails");
+				if(position < mVenueListAdapter.getCount()){
+						String venueId = mVenueListAdapter.getItem(position).getVenueId();
+						mOnDetailsStartListener.onDetailsStart(venueId);
+				}
 		}
 
 		@Override public void onScrollStateChanged(AbsListView view, int scrollState) {
@@ -103,15 +101,15 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 		@Override public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
 				int totalItemCount) {
 
-				final int lastItem = firstVisibleItem + visibleItemCount;
+				int lastItem = firstVisibleItem + visibleItemCount;
 				if(!isLoading && lastItem == totalItemCount){
 						isLoading = true;
 						getListView().addFooterView(mFooterLoadingView);
 
-						LatLng sountWest = SphericalUtil.computeOffset(mVisibleBounds.southwest, 200, SOUTH_WEST_DEGREES);
+						LatLng southWest = SphericalUtil.computeOffset(mVisibleBounds.southwest, 200, SOUTH_WEST_DEGREES);
 						LatLng northEast = SphericalUtil.computeOffset(mVisibleBounds.northeast, 200, NORTH_EAST_DEGREES);
-						mVisibleBounds = new LatLngBounds(sountWest, northEast);
-						mCallback.downloadMoreVenues(mVisibleBounds);
+						mVisibleBounds = new LatLngBounds(southWest, northEast);
+						mOnLoadMoreListener.downloadMoreVenues(mVisibleBounds);
 				}
 		}
 
@@ -129,9 +127,9 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 						mVisibleBounds = DEFAULT_VISIBLE_BOUNDS;
 				}
 				LatLng devicePosition = mVisibleBounds.getCenter();
-				LatLng sountWest = SphericalUtil.computeOffset(devicePosition, 500, SOUTH_WEST_DEGREES);
+				LatLng southWest = SphericalUtil.computeOffset(devicePosition, 500, SOUTH_WEST_DEGREES);
 				LatLng northEast = SphericalUtil.computeOffset(devicePosition, 500, NORTH_EAST_DEGREES);
-				mVisibleBounds = new LatLngBounds(sountWest, northEast);
+				mVisibleBounds = new LatLngBounds(southWest, northEast);
 
 				mVenues.clear();
 				if (mVenueListAdapter != null) {
@@ -148,7 +146,7 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 		@Override public void deliverNewVenues(ArrayList<Venue> newVenues) {
 				Log.d(TAG, "deliverNewVenues: ");
 				newVenues.removeAll(mVenues);
-				if(newVenues.size() != 0){
+				if(!newVenues.isEmpty()){
 						mVenues.addAll(newVenues);
 						Collections.sort(mVenues);
 						mVenueListAdapter.notifyDataSetChanged();

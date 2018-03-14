@@ -8,7 +8,7 @@
 
 
     <ImageView
-        android:id="@+id/btn_main_device_location"
+        android:id="@+id/btn_main_gps"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_margin="8dp"
@@ -18,6 +18,7 @@
         app:layout_constraintBottom_toBottomOf="@id/frame_main_place_autocomplete"
         android:clickable="true"
         android:background="@drawable/main_gps"
+        android:backgroundTint="@color/primary_dark"
         />
     <FrameLayout
         android:id="@+id/frame_main_place_autocomplete"
@@ -25,7 +26,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintLeft_toRightOf="@id/btn_main_device_location"
+        app:layout_constraintLeft_toRightOf="@id/btn_main_gps"
         app:layout_constraintRight_toLeftOf="@id/btn_main_toggle_mode"
         android:background="@drawable/layout_border"
         >
