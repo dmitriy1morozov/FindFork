@@ -86,7 +86,7 @@ public class MapFragment extends Fragment
 						mVenueMarkers = new HashMap<>();
 				}
 
-				if(savedInstanceState != null){
+				if(mVisibleBounds == null && savedInstanceState != null){
 						mVisibleBounds = savedInstanceState.getParcelable(Constants.BUNDLE_VISIBLE_BOUNDS);
 				}
 				return rootView;
@@ -145,51 +145,18 @@ public class MapFragment extends Fragment
 		}
 
 		//==============================================================================================
-		private boolean isMapOnboardingFinished() {
+		private boolean isOnboardingFinished() {
 				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				return pref.getBoolean(ATTR_ONBOARDING_MAP, false);
 		}
 
-		private void finishMapOnboarding() {
+		private void finishOnboarding(boolean isFinished) {
 				SharedPreferences pref = mParentContext.getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				SharedPreferences.Editor editor = pref.edit();
-				editor.putBoolean(ATTR_ONBOARDING_MAP, true);
+				editor.putBoolean(ATTR_ONBOARDING_MAP, isFinished);
 				editor.apply();
 		}
 
-		private void startMapOnboarding(){
-				final Map<String, View> tutorials = new LinkedTreeMap<>();
-				tutorials.put(getString(R.string.onboarding_map_rating_filter), mRatingFilterTextView);
-				tutorials.put(getString(R.string.onboarding_map_googlemap), mMapView);
-				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
-
-				final Tutors tutors = new TutorsBuilder()
-						.textColorRes(android.R.color.white)
-						.shadowColorRes(R.color.shadow)
-						.textSizeRes(R.dimen.textNormal)
-						.spacingRes(R.dimen.spacingNormal)
-						.lineWidthRes(R.dimen.lineWidth)
-						.cancelable(false)
-						.build();
-
-				tutors.setListener(new TutorialListener() {
-						@Override public void onNext() {
-								showTutorial(tutors, iterator);
-						}
-
-						@Override public void onComplete() {
-								finishMapOnboarding();
-								tutors.close();
-						}
-
-						@Override public void onCompleteAll() {
-								finishMapOnboarding();
-								tutors.close();
-						}
-				});
-
-				showTutorial(tutors, iterator);
-		}
 		private void showTutorial(Tutors tutors, Iterator<Map.Entry<String, View>> iterator) {
 				if (iterator != null && iterator.hasNext()) {
 						Map.Entry<String, View> next = iterator.next();
@@ -229,11 +196,6 @@ public class MapFragment extends Fragment
 								mVenueMarkers.put(id, marker);
 								mGoogleMap.setOnMarkerClickListener(this);
 						}while(venues.moveToNext());
-
-						//Enter point for onboarding procedure. It starts when the map is filled with markers
-						if(!isMapOnboardingFinished()){
-								startMapOnboarding();
-						}
 				}
 		}
 		private void highlightTopRankedVenues(Cursor venues) {
@@ -284,12 +246,10 @@ public class MapFragment extends Fragment
 		@Override public void onMapLoaded() {
 				Log.d(TAG, "onMapLoaded: ");
 				mGoogleMap.setOnCameraIdleListener(this);
-				if(mVisibleBounds != null){
-						moveCamera(mVisibleBounds);
-				}else{
-						Log.d(TAG, "onMapLoaded: Load Default bounds");
-						moveCamera(Constants.DEFAULT_VISIBLE_BOUNDS);
+				if(mVisibleBounds == null){
+						mVisibleBounds = DEFAULT_VISIBLE_BOUNDS;
 				}
+				moveCamera(mVisibleBounds);
 		}
 
 		@Override public void onCameraIdle() {
@@ -357,5 +317,39 @@ public class MapFragment extends Fragment
 
 		public void setHighlightedVenueId(@NonNull String venueId){
 				mHighlightedVenueId = venueId;
+		}
+
+		public void startOnboarding(){
+				final Map<String, View> tutorials = new LinkedTreeMap<>();
+				tutorials.put(getString(R.string.onboarding_map_rating_filter), mRatingFilterTextView);
+				tutorials.put(getString(R.string.onboarding_map_googlemap), mMapView);
+				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
+
+				final Tutors tutors = new TutorsBuilder()
+						.textColorRes(android.R.color.white)
+						.shadowColorRes(R.color.shadow)
+						.textSizeRes(R.dimen.textNormal)
+						.spacingRes(R.dimen.spacingNormal)
+						.lineWidthRes(R.dimen.lineWidth)
+						.cancelable(false)
+						.build();
+
+				tutors.setListener(new TutorialListener() {
+						@Override public void onNext() {
+								showTutorial(tutors, iterator);
+						}
+
+						@Override public void onComplete() {
+								finishOnboarding(true);
+								tutors.close();
+						}
+
+						@Override public void onCompleteAll() {
+								finishOnboarding(true);
+								tutors.close();
+						}
+				});
+
+				showTutorial(tutors, iterator);
 		}
 }

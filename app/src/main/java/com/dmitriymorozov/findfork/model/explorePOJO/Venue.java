@@ -16,6 +16,9 @@ public class Venue{
 	@SerializedName("rating")
 	private double rating;
 
+	@SerializedName("menu")
+	private Menu menu;
+
 	@SerializedName("photos")
 	private Photos photos;
 
@@ -83,6 +86,14 @@ public class Venue{
 
 	public double getRating(){
 		return rating;
+	}
+
+	public void setMenu(Menu menu){
+				this.menu = menu;
+		}
+
+	public Menu getMenu(){
+			return menu;
 	}
 
 	public void setPhotos(Photos photos){
@@ -211,8 +222,9 @@ public class Venue{
 			"Venue{" + 
 			"hours = '" + hours + '\'' + 
 			",verified = '" + verified + '\'' + 
-			",rating = '" + rating + '\'' + 
-			",photos = '" + photos + '\'' + 
+			",rating = '" + rating + '\'' +
+			",menu = '" + menu + '\'' +
+			",photos = '" + photos + '\'' +
 			",url = '" + url + '\'' + 
 			",beenHere = '" + beenHere + '\'' + 
 			",hereNow = '" + hereNow + '\'' + 

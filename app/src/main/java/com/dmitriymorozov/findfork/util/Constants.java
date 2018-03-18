@@ -32,11 +32,18 @@ public final class Constants {
 		public static final int NORTH_EAST_DEGREES = 45;
 		public static final int EARTH_RADIUS = 6371000; //in meters
 
-
 		public static final int CURSOR_ID_MAIN = 1;
 		public static final int CURSOR_ID_VENUE_GENERAL = 2;
 		public static final int CURSOR_ID_VENUE_DETAILS = 3;
+		public static final int CURSOR_ID_VENUE_HOURS = 4;
 
+		public static final int MONDAY = 1;
+		public static final int TUESDAY= 2;
+		public static final int WEDNESDAY = 3;
+		public static final int THURSDAY = 4;
+		public static final int FRIDAY = 5;
+		public static final int SATURDAY = 6;
+		public static final int SUNDAY = 7;
 
 		public static final String SELECTION_LATITUDE_INSIDE =
 				String.format(Locale.US, "%s > ? AND %s < ?", DBContract.VENUE_LAT, DBContract.VENUE_LAT);

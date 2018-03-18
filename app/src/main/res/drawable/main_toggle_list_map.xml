@@ -6,6 +6,6 @@
 		</item>
 		<item android:state_checked="true">
 				<bitmap android:src="@drawable/main_list"
-						android:tint="@android:color/black"/>
+						android:tint="@color/primary_dark"/>
 		</item>
 </selector>

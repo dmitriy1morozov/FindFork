@@ -1,25 +1,33 @@
 <resources>
 		<string name="app_name">FindFork</string>
 
-		<string name="details_name_default">No name</string>
-		<string name="details_address_default">No address</string>
-		<string name="details_phone_default">No phone number</string>
-		<string name="details_site_default">No site</string>
-		<string name="details_pricetag_default">No price tag</string>
+		<string name="details_name_default">Cafe name here</string>
+		<string name="details_hours_open_default">09:00</string>
+		<string name="details_hours_separator">-</string>
+		<string name="details_hours_close_default">21:00</string>
+		<string name="details_address_default">Address here</string>
+		<string name="details_phone_default">555-55-55</string>
+		<string name="details_site_default">http://siteurl.com</string>
+		<string name="details_menu">Menu</string>
+		<string name="details_price_currency">$$$</string>
+		<string name="details_pricetag_default">Price tag here</string>
 		<string name="details_rate_me">Rate this place</string>
 		<string name="details_submitter_hint">Type your name</string>
 		<string name="details_error_rating_submit_no_name">Please type your name to submit rating</string>
 
 		<string name="onboarding_main_gps">Tap GPS button to get your actual location</string>
 		<string name="onboarding_main_search">Use search bar to find a specific location</string>
+		<string name="onboarding_main_help">Tap help icon to return to this tutorial again</string>
 		<string name="onboarding_main_toggle">Tap toggle button to switch between map and list modes</string>
 		<string name="onboarding_map_rating_filter">Use the progress bar to filter out cafes with lower rating</string>
 		<string name="onboarding_map_googlemap">Use the map to navigate. Click on the marker to get detailed information about the cafe</string>
 		<string name="onboarding_list_sorted">Cafes are sorted by the distance from the current location</string>
 		<string name="onboarding_list_details">Click the cafe to get detailed information</string>
+		<string name="onboarding_details_hours">Working hours schedule</string>
 		<string name="onboarding_details_address">Click the icon or cafe address to show it on the map</string>
 		<string name="onboarding_details_phone">Click the phone icon or phone number to dial</string>
 		<string name="onboarding_details_site">Click the site icon or its URL to open the site</string>
+		<string name="onboarding_details_menu">Click the menu icon to view the cafe's meals</string>
 		<string name="onboarding_details_price">Check the price rating</string>
 		<string name="onboarding_details_rating">Check the overall service rating</string>
 		<string name="onboarding_details_rating_submitter_name">Type your name to submit new rating</string>

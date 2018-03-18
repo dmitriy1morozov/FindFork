@@ -5,6 +5,7 @@ import retrofit2.Call;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.GET;
+import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 interface ApiFoursquare {
@@ -21,6 +22,13 @@ interface ApiFoursquare {
 				@Query("intent") String intent,
 				@Query("query") String query,
 				@Query("limit") int limit
+		);
+
+		@GET("{venue_id}/hours?v=" + VERSION)
+		Call<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON> downloadWorkingHoursData(
+				@Path("venue_id") String venueId,
+				@Query("client_id") String clientId,
+				@Query("client_secret") String clientSecret
 		);
 
 		Retrofit mRetrofit = new Retrofit

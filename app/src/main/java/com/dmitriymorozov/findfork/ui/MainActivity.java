@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity
 		private static final boolean TOGGLE_LIST = false;
 
 		@BindView(R.id.btn_main_gps) ImageView mGpsImageView;
+		@BindView(R.id.btn_main_help) ImageView mHelpImageView;
 		@BindView(R.id.btn_main_toggle_mode) CheckBox mToggleMode;
 		@BindView(R.id.progress_main_downloading) ProgressBar mLoadingProgress;
 		private FusedLocationProviderClient mFusedLocationClient;
@@ -99,16 +100,13 @@ public class MainActivity extends AppCompatActivity
 				ButterKnife.bind(this);
 
 				mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-				if(isMainOnboardingFinished() && savedInstanceState == null){
-						Log.d(TAG, "onCreate: Initial State");
-						mToggleMode.setChecked(TOGGLE_MAP);
-						mMapFragment = new MapFragment();
-						getSupportFragmentManager().beginTransaction()
-								.add(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP)
-								.commit();
+
+				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_MAP);
+				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_LIST);
+				mDetailsFragment = (DetailsFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_DETAILS);
+				if(mMapFragment == null && mListFragment == null && mDetailsFragment == null){
 						mGpsImageView.callOnClick();
 				}
-
 				mAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(
 						R.id.fragment_main_place_autocomplete);
 				mAutocompleteFragment.setOnPlaceSelectedListener(this);
@@ -122,8 +120,8 @@ public class MainActivity extends AppCompatActivity
 
 		@Override public void onWindowFocusChanged(boolean hasFocus) {
 				super.onWindowFocusChanged(hasFocus);
-				if(hasFocus && !isMainOnboardingFinished()){
-						startMainOnboarding();
+				if(hasFocus && !isOnboardingFinished()){
+						startOnboarding();
 				}
 		}
 
@@ -137,7 +135,7 @@ public class MainActivity extends AppCompatActivity
 		/**
 		 * Check if the MainActivity onboarding finished
 		 */
-		private boolean isMainOnboardingFinished() {
+		private boolean isOnboardingFinished() {
 				SharedPreferences pref = getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				return pref.getBoolean(ATTR_ONBOARDING_MAIN, false);
 		}
@@ -145,23 +143,24 @@ public class MainActivity extends AppCompatActivity
 		/**
 		 * Write to shared pref that MainActivity onboarding finished
 		 */
-		private void finishMainOnboarding() {
+		private void finishOnboarding(boolean isFinished) {
 				SharedPreferences pref = getSharedPreferences(PREF_ONBOARDING, MODE_PRIVATE);
 				SharedPreferences.Editor editor = pref.edit();
-				editor.putBoolean(ATTR_ONBOARDING_MAIN, true);
+				editor.putBoolean(ATTR_ONBOARDING_MAIN, isFinished);
 				editor.apply();
-
-				mToggleMode.setChecked(TOGGLE_MAP);
-				mMapFragment = new MapFragment();
-				getSupportFragmentManager().beginTransaction()
-						.add(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP)
-						.commit();
+				if(mMapFragment != null && mMapFragment.isVisible()){
+						mMapFragment.startOnboarding();
+				}
+				if(mDetailsFragment != null && mDetailsFragment.isVisible()){
+						mDetailsFragment.startOnboarding();
+				}
 		}
 
-		private void startMainOnboarding(){
+		private void startOnboarding(){
 				final Map<String, View> tutorials = new LinkedTreeMap<>();
 				tutorials.put(getString(R.string.onboarding_main_gps), mGpsImageView);
 				tutorials.put(getString(R.string.onboarding_main_search), findViewById(R.id.frame_main_place_autocomplete));
+				tutorials.put(getString(R.string.onboarding_main_help), findViewById(R.id.btn_main_help));
 				tutorials.put(getString(R.string.onboarding_main_toggle), mToggleMode);
 				final Iterator<Map.Entry<String, View>> iterator = tutorials.entrySet().iterator();
 
@@ -181,12 +180,12 @@ public class MainActivity extends AppCompatActivity
 
 						@Override public void onComplete() {
 								tutors.close();
-								finishMainOnboarding();
+								finishOnboarding(true);
 						}
 
 						@Override public void onCompleteAll() {
 								tutors.close();
-								finishMainOnboarding();
+								finishOnboarding(true);
 						}
 				});
 		}
@@ -201,14 +200,13 @@ public class MainActivity extends AppCompatActivity
 				Log.d(TAG, "updatePosition:");
 				mToggleMode.setChecked(TOGGLE_MAP);
 				if (mMapFragment == null) {
-						Log.d(TAG, "onToggleMode: new MapFragment");
 						mMapFragment = new MapFragment();
 				}
 				if(!mMapFragment.isVisible()){
+						mMapFragment.setVisibleBounds(visibleBounds);
 						FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP);
-						fragmentTransaction.commitNow();
-						mMapFragment.setVisibleBounds(visibleBounds);
+						fragmentTransaction.commitAllowingStateLoss();
 				}else{
 						mMapFragment.moveCamera(visibleBounds);
 				}
@@ -294,45 +292,47 @@ public class MainActivity extends AppCompatActivity
 				}
 		}
 
+		@OnClick(R.id.btn_main_help) void onHelpClick() {
+				startOnboarding();
+		}
+
 		/**
 		 * Map / List toggle_mode button onClickListener
-		 *
 		 * @param view - ref to ToogleButton
 		 */
 		@OnClick(R.id.btn_main_toggle_mode) void onToggleMode(Checkable view) {
-				boolean mode = view.isChecked();
-				if(mDetailsFragment != null && mDetailsFragment.isVisible()){
+				LatLngBounds visibleBounds;
+				if (mMapFragment != null && mMapFragment.isVisible()) {
+						visibleBounds = mMapFragment.getVisibleBounds();
+				} else if (mListFragment != null && mListFragment.isVisible()) {
+						visibleBounds = mListFragment.getVisibleBounds();
+						Log.d(TAG, "onToggleMode: mListFragment.visibleBounds = " + visibleBounds);
+				} else if (mDetailsFragment != null && mDetailsFragment.isVisible()) {
+						visibleBounds = mDetailsFragment.getVisibleBounds();
+						Log.d(TAG, "onToggleMode: mDetailsFragment.visibleBounds = " + visibleBounds);
 						onBackPressed();
+				} else {
+						Log.d(TAG, "onToggleMode: DEFAULT_VISIBLE_BOUNDS");
+						visibleBounds = DEFAULT_VISIBLE_BOUNDS;
 				}
 
+				boolean mode = view.isChecked();
 				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 				if (mode == TOGGLE_LIST) {
-						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
-						if (mMapFragment != null) {
-								visibleBounds = mMapFragment.getVisibleBounds();
-						}
-
 						if (mListFragment == null) {
-								Log.d(TAG, "onToggleMode: new ListFragment");
 								mListFragment = new ListFragment();
 						}
+						mListFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, Constants.FRAGMENT_TAG_LIST);
 						fragmentTransaction.commitNow();
-						mListFragment.setVisibleBounds(visibleBounds);
 				}
 				if (mode == TOGGLE_MAP) {
-						LatLngBounds visibleBounds = DEFAULT_VISIBLE_BOUNDS;
-						if (mListFragment != null) {
-								visibleBounds = mListFragment.getVisibleBounds();
-						}
-
 						if (mMapFragment == null) {
-								Log.d(TAG, "onToggleMode: new MapFragment");
 								mMapFragment = new MapFragment();
 						}
+						mMapFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mMapFragment, Constants.FRAGMENT_TAG_MAP);
 						fragmentTransaction.commitNow();
-						mMapFragment.setVisibleBounds(visibleBounds);
 				}
 		}
 
@@ -443,7 +443,7 @@ public class MainActivity extends AppCompatActivity
 
 				CursorLoader cursorLoader = new CursorLoader(this, MyContentProvider.URI_CONTENT_VENUES,
 						null, selection, selectionArgs, SORT_ORDER);
-				cursorLoader.setUpdateThrottle(5000);
+				cursorLoader.setUpdateThrottle(2000);
 				return cursorLoader;
 		}
 
@@ -518,6 +518,8 @@ public class MainActivity extends AppCompatActivity
 						mDetailsFragment = new DetailsFragment();
 				}
 				mDetailsFragment.setVenueId(venueId);
+				mBinder.getWorkingHoursData(venueId);
+
 				fragmentTransaction.replace(R.id.frame_main_container, mDetailsFragment);
 				fragmentTransaction.addToBackStack(Constants.FRAGMENT_TAG_DETAILS);
 				fragmentTransaction.commit();

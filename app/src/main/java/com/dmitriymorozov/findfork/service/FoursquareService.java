@@ -8,10 +8,11 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
-import com.dmitriymorozov.findfork.model.explorePOJO.ErrorResponse;
+import com.dmitriymorozov.findfork.model.explorePOJO.*;
 import com.dmitriymorozov.findfork.model.explorePOJO.FoursquareJSON;
-import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.model.explorePOJO.Meta;
+import com.dmitriymorozov.findfork.model.workingHoursPOJO.*;
+import com.dmitriymorozov.findfork.model.workingHoursPOJO.Hours;
 import com.dmitriymorozov.findfork.util.Constants;
 import com.dmitriymorozov.findfork.util.Util;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -22,10 +23,11 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import retrofit2.*;
+import retrofit2.Response;
 
 import static com.dmitriymorozov.findfork.database.MyContentProvider.*;
 
-public class FoursquareService extends Service implements Callback<FoursquareJSON>{
+public class FoursquareService extends Service{
 
 		public class LocalBinder extends Binder {
 				public void setOnDataDownloadListener(OnServiceListener onDataDownloadListener){
@@ -42,7 +44,46 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 						String ne = String.format(Locale.US, "%s,%s", mVisibleBounds.northeast.latitude, mVisibleBounds.northeast.longitude);
 
 						Call<FoursquareJSON> call = mRetrofit.getNearbyPlacesByRectangle(Constants.API_CLIENT_ID, Constants.API_CLIENT_SECRET, sw, ne, "browse", "food", 200);
-						call.enqueue(FoursquareService.this);
+						call.enqueue(new Callback<FoursquareJSON>() {
+								@Override public void onResponse(@NonNull Call<FoursquareJSON> call,
+										@NonNull Response<FoursquareJSON> response) {
+										dispatchVenuesData(response);
+								}
+
+								@Override public void onFailure(@NonNull Call<FoursquareJSON> call, @NonNull Throwable t) {
+										if(mCallbackRef != null && mCallbackRef.get() != null){
+												String errorDetail = t.getMessage();
+												String errorType = "Retrofit onFailure";
+												mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
+										}
+								}
+						});
+				}
+
+				/**
+				 * Api --> local DB layer
+				 */
+				public void getWorkingHoursData(final String venueId){
+						Log.d(TAG, "getWorkingHoursData: ");
+
+						Call<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON> call = mRetrofit.downloadWorkingHoursData(venueId, Constants.API_CLIENT_ID, Constants.API_CLIENT_SECRET);
+						call.enqueue(new Callback<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON>() {
+								@Override public void onResponse(
+										@NonNull Call<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON> call,
+										@NonNull Response<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON> response) {
+										dispatchHoursData(venueId, response);
+								}
+
+								@Override public void onFailure(
+										@NonNull Call<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON> call,
+										@NonNull Throwable t) {
+										if(mCallbackRef != null && mCallbackRef.get() != null){
+												String errorDetail = t.getMessage();
+												String errorType = "Retrofit onFailure";
+												mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
+										}
+								}
+						});
 				}
 		}
 
@@ -68,26 +109,10 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 				super.onCreate();
 				mExecutorService = Executors.newFixedThreadPool(1 );
 		}
-
-		@Override public void onResponse(@NonNull Call<FoursquareJSON> call,
-				@NonNull Response<FoursquareJSON> response) {
-				handleRetrofitResponse(response);
-		}
-
-		@Override public void onFailure(@NonNull Call<FoursquareJSON> call, @NonNull
-				Throwable t) {
-				String errorDetail = t.getMessage();
-				Log.d(TAG, "Retrofit onFailure: " + errorDetail);
-				if(mCallbackRef != null && mCallbackRef.get() != null){
-						String errorType = "Retrofit onFailure";
-						mCallbackRef.get().onNetworkError(SERVICE_ERROR_CODE, errorType, errorDetail);
-				}
-		}
 		//==============================================================================================
-		private void handleRetrofitResponse(Response<FoursquareJSON> response) {
-
+		private void dispatchVenuesData(Response<FoursquareJSON> response) {
+				Log.d(TAG, "dispatchVenuesData. JSON.raw = " + response.raw());
 				if (!response.isSuccessful()) {
-						Log.d(TAG, "Retrofit response.isSuccessful() == false. FAIL. JSON.raw = " + response.raw());
 						Gson gson = new Gson();
 						ErrorResponse errorResponse = gson.fromJson(response.errorBody().charStream(), ErrorResponse.class);
 						Meta meta = errorResponse.getMeta();
@@ -116,6 +141,39 @@ public class FoursquareService extends Service implements Callback<FoursquareJSO
 						if (mCallbackRef != null && mCallbackRef.get() != null) {
 								mCallbackRef.get().onNetworkJobsFinished();
 						}
+				}
+		}
+
+		private void dispatchHoursData(final String venueId, final Response<com.dmitriymorozov.findfork.model.workingHoursPOJO.FoursquareJSON> response) {
+				Log.d(TAG, "dispatchHoursData: raw = " + response.raw());
+				if (!response.isSuccessful()) {
+						Log.d(TAG, "Retrofit response.isSuccessful() == false. FAIL. JSON.raw = " + response.raw());
+						Gson gson = new Gson();
+						ErrorResponse errorResponse = gson.fromJson(response.errorBody().charStream(), ErrorResponse.class);
+						Meta meta = errorResponse.getMeta();
+						String errorType = meta.getErrorType();
+						String errorDetail = meta.getErrorDetail();
+						if (mCallbackRef != null && mCallbackRef.get() != null) {
+								mCallbackRef.get().onNetworkError(response.code(), errorType, errorDetail);
+						}
+						return;
+				}
+
+				Hours workingHours = response.body().getResponse().getHours();
+				final List<TimeframesItem> timeFrames = workingHours.getTimeframes();
+				if(timeFrames == null){
+						return;
+				}
+
+				mExecutorService.execute(new Runnable() {
+						@Override public void run() {
+								ContentValues workingHoursValues = Util.createWorkingHoursContentValues(venueId, timeFrames);
+								getContentResolver().insert(URI_CONTENT_HOURS, workingHoursValues);
+						}
+				});
+
+				if (mCallbackRef != null && mCallbackRef.get() != null) {
+						mCallbackRef.get().onNetworkJobsFinished();
 				}
 		}
 

@@ -62,16 +62,14 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 
 		@Override public void onActivityCreated(@Nullable Bundle savedInstanceState) {
 				super.onActivityCreated(savedInstanceState);
-				if(savedInstanceState != null){
-						mVisibleBounds = savedInstanceState.getParcelable(Constants.BUNDLE_VISIBLE_BOUNDS);
-				} else{
-						mVisibleBounds = Constants.DEFAULT_VISIBLE_BOUNDS;
-				}
-				getListView().setOnScrollListener(this);
 		}
 
 		@Override public void onViewCreated(View view, Bundle savedInstanceState) {
 				super.onViewCreated(view, savedInstanceState);
+				if(savedInstanceState != null){
+						mVisibleBounds = savedInstanceState.getParcelable(Constants.BUNDLE_VISIBLE_BOUNDS);
+				}
+				getListView().setOnScrollListener(this);
 				view.scrollBy(0,1);
 		}
 
@@ -95,8 +93,7 @@ public class ListFragment extends android.support.v4.app.ListFragment implements
 				}
 		}
 
-		@Override public void onScrollStateChanged(AbsListView view, int scrollState) {
-		}
+		@Override public void onScrollStateChanged(AbsListView view, int scrollState) {}
 
 		@Override public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
 				int totalItemCount) {

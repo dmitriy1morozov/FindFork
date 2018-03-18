@@ -19,6 +19,7 @@ public class MyContentProvider extends ContentProvider {
 
 		public static final Uri URI_CONTENT_VENUES = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_VENUES));
 		public static final Uri URI_CONTENT_DETAILS = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_DETAILS));
+		public static final Uri URI_CONTENT_HOURS = Uri.parse(String.format("content://%s/%s", AUTHORITY, TABLE_HOURS));
 
 		private static final String CONTENT_TYPE_VENUE_SINGLE = String.format(Locale.US,
 				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_VENUES);
@@ -28,12 +29,18 @@ public class MyContentProvider extends ContentProvider {
 				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_DETAILS);
 		private static final String CONTENT_TYPE_DETAILS_MULTIPLE = String.format(Locale.US,
 				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_DETAILS);
+		private static final String CONTENT_TYPE_HOURS_SINGLE = String.format(Locale.US,
+				"%s.%s/%s.%s", "vnd", "android.cursor.item", AUTHORITY, TABLE_DETAILS);
+		private static final String CONTENT_TYPE_HOURS_MULTIPLE = String.format(Locale.US,
+				"%s.%s/%s.%s", "vnd", "android.cursor.dir", AUTHORITY, TABLE_DETAILS);
 
 		//UriMatcher constants
 		private static final int URI_MATCH_VENUE_SINGLE = 1;
 		private static final int URI_MATCH_VENUE_MULTIPLE = 2;
 		private static final int URI_MATCH_DETAILS_SINGLE = 3;
 		private static final int URI_MATCH_DETAILS_MULTIPLE = 4;
+		private static final int URI_MATCH_HOURS_SINGLE = 5;
+		private static final int URI_MATCH_HOURS_MULTIPLE = 6;
 
 		private static final UriMatcher URI_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
 		static
@@ -42,6 +49,8 @@ public class MyContentProvider extends ContentProvider {
 				URI_MATCHER.addURI(AUTHORITY, TABLE_VENUES, URI_MATCH_VENUE_MULTIPLE);
 				URI_MATCHER.addURI(AUTHORITY, TABLE_DETAILS + "/*", URI_MATCH_DETAILS_SINGLE);
 				URI_MATCHER.addURI(AUTHORITY, TABLE_DETAILS, URI_MATCH_DETAILS_MULTIPLE);
+				URI_MATCHER.addURI(AUTHORITY, TABLE_HOURS + "/*", URI_MATCH_HOURS_SINGLE);
+				URI_MATCHER.addURI(AUTHORITY, TABLE_HOURS, URI_MATCH_HOURS_MULTIPLE);
 		}
 
 		private DBHelper mDbHelper;
@@ -66,6 +75,10 @@ public class MyContentProvider extends ContentProvider {
 						Log.d(TAG, "insertDETAILS: values = " + values);
 						long rowId = mSqliteDatabase.insertWithOnConflict(TABLE_DETAILS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 						resultUri = ContentUris.withAppendedId(URI_CONTENT_DETAILS, rowId);
+				} else if(URI_MATCHER.match(uri) == URI_MATCH_HOURS_MULTIPLE) {
+						Log.d(TAG, "insertHOURS: values = " + values);
+						long rowId = mSqliteDatabase.insertWithOnConflict(TABLE_HOURS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+						resultUri = ContentUris.withAppendedId(URI_CONTENT_HOURS, rowId);
 				} else{
 						Log.d(TAG, "insert: WRONG URI!! terminating");
 						return uri;
@@ -103,6 +116,12 @@ public class MyContentProvider extends ContentProvider {
 
 				switch (URI_MATCHER.match(uri)){
 						case URI_MATCH_VENUE_MULTIPLE:
+								rowsUpdated = mSqliteDatabase.update(TABLE_VENUES, values, selection, selectionArgs);
+								break;
+						case URI_MATCH_DETAILS_MULTIPLE:
+								rowsUpdated = mSqliteDatabase.update(TABLE_DETAILS, values, selection, selectionArgs);
+								break;
+						case URI_MATCH_HOURS_MULTIPLE:
 								rowsUpdated = mSqliteDatabase.update(TABLE_VENUES, values, selection, selectionArgs);
 								break;
 						default:
@@ -143,6 +162,16 @@ public class MyContentProvider extends ContentProvider {
 								tableName = TABLE_DETAILS;
 								uriContent = URI_CONTENT_DETAILS;
 								break;
+						case URI_MATCH_HOURS_MULTIPLE:
+								Log.d(TAG, "query HOURS_MULTIPLE");
+								tableName = TABLE_HOURS;
+								uriContent = URI_CONTENT_HOURS;
+								break;
+						case URI_MATCH_HOURS_SINGLE:
+								Log.d(TAG, "query HOURS_SINGLE");
+								tableName = TABLE_HOURS;
+								uriContent = URI_CONTENT_HOURS;
+								break;
 						default:
 								throw new IllegalArgumentException("Wrong URI: " + uri);
 				}
@@ -167,6 +196,10 @@ public class MyContentProvider extends ContentProvider {
 								return CONTENT_TYPE_DETAILS_SINGLE;
 						case URI_MATCH_DETAILS_MULTIPLE:
 								return CONTENT_TYPE_DETAILS_MULTIPLE;
+						case URI_MATCH_HOURS_SINGLE:
+								return CONTENT_TYPE_HOURS_SINGLE;
+						case URI_MATCH_HOURS_MULTIPLE:
+								return CONTENT_TYPE_HOURS_MULTIPLE;
 						default:
 								return null;
 				}

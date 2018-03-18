@@ -27,7 +27,7 @@
         android:layout_margin="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toRightOf="@id/btn_main_gps"
-        app:layout_constraintRight_toLeftOf="@id/btn_main_toggle_mode"
+        app:layout_constraintRight_toLeftOf="@id/btn_main_help"
         android:background="@drawable/layout_border"
         >
 
@@ -39,12 +39,26 @@
             />
     </FrameLayout>
 
+    <ImageView
+        android:id="@+id/btn_main_help"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_margin="8dp"
+        app:layout_constraintLeft_toRightOf="@id/frame_main_place_autocomplete"
+        app:layout_constraintRight_toLeftOf="@id/btn_main_toggle_mode"
+        app:layout_constraintTop_toTopOf="@id/frame_main_place_autocomplete"
+        app:layout_constraintBottom_toBottomOf="@id/frame_main_place_autocomplete"
+        android:clickable="true"
+        android:background="@drawable/main_help"
+        android:backgroundTint="@color/primary_dark"
+        />
+
     <CheckBox
         android:id="@+id/btn_main_toggle_mode"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_margin="8dp"
-        app:layout_constraintLeft_toRightOf="@id/frame_main_place_autocomplete"
+        app:layout_constraintLeft_toRightOf="@id/btn_main_help"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="@id/frame_main_place_autocomplete"
         app:layout_constraintBottom_toBottomOf="@id/frame_main_place_autocomplete"

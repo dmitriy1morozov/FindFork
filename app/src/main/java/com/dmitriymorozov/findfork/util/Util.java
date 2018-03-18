@@ -1,13 +1,13 @@
 package com.dmitriymorozov.findfork.util;
 
 import android.content.ContentValues;
-import android.content.Context;
-import android.location.LocationManager;
+import android.database.Cursor;
 import android.support.annotation.NonNull;
 import com.dmitriymorozov.findfork.database.DBContract;
 import com.dmitriymorozov.findfork.model.explorePOJO.ItemsItem;
 import com.dmitriymorozov.findfork.model.explorePOJO.Location;
 import com.dmitriymorozov.findfork.model.explorePOJO.Venue;
+import com.dmitriymorozov.findfork.model.workingHoursPOJO.TimeframesItem;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.android.SphericalUtil;
@@ -101,6 +101,7 @@ public final class Util {
 						String phone = null;
 						String phoneFormatted = null;
 						String siteUrl = singleVenue.getUrl();
+						String menuUrl = null;
 						Integer priceTier = null;
 						String priceCurrency = null;
 						String priceMessage = null;
@@ -111,6 +112,9 @@ public final class Util {
 						if(singleVenue.getContact() != null){
 								phone = singleVenue.getContact().getPhone();
 								phoneFormatted = singleVenue.getContact().getFormattedPhone();
+						}
+						if(singleVenue.getMenu() != null){
+								menuUrl = singleVenue.getMenu().getUrl();
 						}
 						if(singleVenue.getPrice() != null){
 								priceTier = singleVenue.getPrice().getTier();
@@ -124,6 +128,7 @@ public final class Util {
 						contentValues[i].put(DBContract.DETAILS_PHONE, phone);
 						contentValues[i].put(DBContract.DETAILS_PHONE_FORMATTED, phoneFormatted);
 						contentValues[i].put(DBContract.DETAILS_SITE_URL, siteUrl);
+						contentValues[i].put(DBContract.DETAILS_MENU_URL, menuUrl);
 						contentValues[i].put(DBContract.DETAILS_PRICE_TIER, priceTier);
 						contentValues[i].put(DBContract.DETAILS_PRICE_CURRENCY, priceCurrency);
 						contentValues[i].put(DBContract.DETAILS_PRICE_MESSAGE, priceMessage);
@@ -145,7 +150,50 @@ public final class Util {
 				return stringBuilder.toString();
 		}
 
+		/**
+		 * HEAVY METHOD!
+		 * Utility method to convert Hours workingHours into venues ContentValues structure
+		 * First day of the week is MONDAY, index - 1
+		 * Last day of the week is SUNDAY, index - 7
+		 */
+		public static ContentValues createWorkingHoursContentValues(@NonNull String venueId, @NonNull List<TimeframesItem> timeFrames){
+				ContentValues contentValues = new ContentValues();
+				contentValues.put(DBContract.VENUE_ID, venueId);
+
+				for (TimeframesItem timeframesItem:timeFrames) {
+						int open = Integer.parseInt(timeframesItem.getOpen().get(0).getStart());
+						int hoursOpen = open / 100;
+						int minutesOpen = open % 100;
+						open = hoursOpen * 60 + minutesOpen;
+						int close = Integer.parseInt(timeframesItem.getOpen().get(0).getEnd());
+						int hoursClose = close / 100;
+						int minutesClose = close % 100;
+						close = hoursClose * 60 + minutesClose;
+
+						List<Integer> days = timeframesItem.getDays();
+						for (Integer day:days) {
+								contentValues.put(DBContract.HOURS_OPEN[day], open);
+								contentValues.put(DBContract.HOURS_CLOSE[day], close);
+						}
+				}
+				return contentValues;
+		}
+
+		public static boolean foundVenuesTable(Cursor cursor) {
+				return(cursor != null && cursor.moveToFirst() && cursor.getColumnIndex(DBContract.VENUE_NAME) != -1);
+		}
+
+		public static boolean foundDetailsTable(Cursor cursor) {
+				return(cursor != null && cursor.moveToFirst() && cursor.getColumnIndex(DBContract.DETAILS_ADDRESS_FORMATTED) != -1);
+		}
+
+		public static boolean foundWorkingHoursTable(Cursor cursor) {
+				return(cursor != null && cursor.moveToFirst() && cursor.getColumnIndex(DBContract.HOURS_OPEN[Constants.MONDAY]) != -1);
+		}
+
 		//----------------------------------------------------------------------------------------------
 		private Util() {
 		}
+
+
 }
