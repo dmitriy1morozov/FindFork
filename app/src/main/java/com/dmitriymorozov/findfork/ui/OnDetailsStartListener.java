@@ -1,6 +1,5 @@
 package com.dmitriymorozov.findfork.ui;
 
-
-interface OnDetailsStartListener {
+public interface OnDetailsStartListener {
 		void onDetailsStart(String venueId);
 }

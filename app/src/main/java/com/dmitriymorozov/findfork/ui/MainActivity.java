@@ -30,6 +30,7 @@ import com.dmitriymorozov.findfork.R;
 import com.dmitriymorozov.findfork.database.MyContentProvider;
 import com.dmitriymorozov.findfork.service.FoursquareService;
 import com.dmitriymorozov.findfork.service.OnServiceListener;
+import com.dmitriymorozov.findfork.ui.cafesList.RecyclerViewFragment;
 import com.dmitriymorozov.findfork.util.Constants;
 import com.dmitriymorozov.findfork.util.Util;
 import com.google.android.gms.common.api.Status;
@@ -77,7 +78,7 @@ public class MainActivity extends AppCompatActivity
 		private PlaceAutocompleteFragment mAutocompleteFragment;
 
 		private MapFragment mMapFragment;
-		private ListFragment mListFragment;
+		private RecyclerViewFragment mListFragment;
 		private DetailsFragment mDetailsFragment;
 
 		private FoursquareService.LocalBinder mBinder;
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity
 				mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
 				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_MAP);
-				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_LIST);
+				mListFragment = (RecyclerViewFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_LIST);
 				mDetailsFragment = (DetailsFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_DETAILS);
 				if(mMapFragment == null && mListFragment == null && mDetailsFragment == null){
 						mGpsImageView.callOnClick();
@@ -216,7 +217,7 @@ public class MainActivity extends AppCompatActivity
 				Log.d(TAG, "deliverVenuesDataToFragment:");
 
 				mMapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_MAP);
-				mListFragment = (ListFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_LIST);
+				mListFragment = (RecyclerViewFragment) getSupportFragmentManager().findFragmentByTag(Constants.FRAGMENT_TAG_LIST);
 				if (mMapFragment != null && mMapFragment.isVisible()) {
 						mMapFragment.venuesDataReceived(data);
 				}
@@ -320,7 +321,7 @@ public class MainActivity extends AppCompatActivity
 				FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
 				if (mode == TOGGLE_LIST) {
 						if (mListFragment == null) {
-								mListFragment = new ListFragment();
+								mListFragment = new RecyclerViewFragment();
 						}
 						mListFragment.setVisibleBounds(visibleBounds);
 						fragmentTransaction.replace(R.id.frame_main_container, mListFragment, Constants.FRAGMENT_TAG_LIST);
